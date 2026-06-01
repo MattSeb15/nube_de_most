@@ -17,9 +17,18 @@ export async function generateMetadata({
   const { semestre: semestreSlug } = await params;
   const semestre = await getSemestreBySlug(semestreSlug);
   if (!semestre) return { title: "Semestre no encontrado" };
+  const title = `${semestre.nombre} | Apuntes`;
+  const description = `Explora los recursos y materias del ${semestre.nombre} (${semestre.periodo}) en La Nube de Most.`;
+  const url = `/apuntes/${semestreSlug}`;
   return {
-    title: `${semestre.nombre} — Apuntes — La Nube de Most`,
-    description: `Materias del ${semestre.nombre} (${semestre.periodo})`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+    },
   };
 }
 

@@ -3,8 +3,16 @@ import { getAllMaterias } from "@/lib/academic";
 import { MateriaCard } from "@/components/apuntes/MateriaCard";
 
 export const metadata: Metadata = {
-  title: "Todas las Materias — La Nube de Most",
+  title: "Todas las Materias",
   description: "Explora todas las materias registradas en la base de datos de La Nube de Most.",
+  alternates: {
+    canonical: "/materias",
+  },
+  openGraph: {
+    title: "Todas las Materias | La Nube de Most",
+    description: "Explora todas las materias registradas en la base de datos de La Nube de Most.",
+    url: "/materias",
+  },
 };
 
 export default async function MateriasPage() {

@@ -12,9 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Apuntes — La Nube de Most",
+  title: "Apuntes",
   description:
     "Explora los apuntes organizados por semestre y materia en La Nube de Most.",
+  alternates: {
+    canonical: "/apuntes",
+  },
+  openGraph: {
+    title: "Apuntes | La Nube de Most",
+    description: "Explora los apuntes organizados por semestre y materia en La Nube de Most.",
+    url: "/apuntes",
+  },
 };
 
 export default async function ApuntesPage() {

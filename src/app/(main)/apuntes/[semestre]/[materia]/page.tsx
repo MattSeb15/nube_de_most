@@ -32,9 +32,18 @@ export async function generateMetadata({
   const semestre = await getSemestreBySlug(semestreSlug);
   const materia = await getMateriaBySlug(materiaSlug);
   if (!semestre || !materia) return { title: "Materia no encontrada" };
+  const title = `${materia.nombre} — ${semestre.nombre}`;
+  const description = materia.descripcion || `Apuntes y recursos de ${materia.nombre} para el ${semestre.nombre}.`;
+  const url = `/apuntes/${semestreSlug}/${materiaSlug}`;
   return {
-    title: `${materia.nombre} — ${semestre.nombre} — La Nube de Most`,
-    description: materia.descripcion,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+    },
   };
 }
 

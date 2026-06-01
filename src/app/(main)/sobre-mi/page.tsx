@@ -5,9 +5,17 @@ import { Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Acerca de — La Nube de Most",
+  title: "Acerca de",
   description:
     "Conoce a Mateo Sebastian Oviedo Trujillo (Most), creador de La Nube de Most y compartidor de apuntes académicos.",
+  alternates: {
+    canonical: "/sobre-mi",
+  },
+  openGraph: {
+    title: "Acerca de | La Nube de Most",
+    description: "Conoce a Mateo Sebastian Oviedo Trujillo (Most), creador de La Nube de Most y compartidor de apuntes académicos.",
+    url: "/sobre-mi",
+  },
 };
 
 // ── Custom SVG Brand Icons (Filled/Solid Styles) ──

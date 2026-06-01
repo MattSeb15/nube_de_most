@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lightbulb, FileDown, Lock, Eye, EyeOff, CheckCircle2, FolderOpen, Clock } from "lucide-react";
@@ -59,6 +60,35 @@ export async function generateStaticParams() {
   const supabase = createStaticClient();
   const { data } = await supabase.from("actividades").select("slug");
   return (data || []).map((a: any) => ({ slug: a.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const actividad = await getActividadBySlug(slug);
+  
+  if (!actividad) {
+    return { title: "Actividad no encontrada" };
+  }
+
+  const materia = await getMateriaById(actividad.materiaId);
+  const title = `${actividad.nombre} ${materia ? `— ${materia.nombre}` : ''}`;
+  const description = actividad.descripcionOficial || "Detalles y resolución de la actividad académica.";
+  const url = `/actividades/${slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+    },
+  };
 }
 
 export default async function ActividadDetailPage({
