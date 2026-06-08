@@ -25,7 +25,7 @@ import {
 
 const navLinks = [
   { href: "/apuntes", label: "Explorar" },
-  { href: "/actividades", label: "Actividades" },
+  { href: "/actividades", label: "Actividades", disabled: true },
   { href: "/sobre-mi", label: "Acerca de" },
 ];
 
@@ -196,6 +196,22 @@ export function Header() {
         <nav className="hidden lg:flex bg-background/80 backdrop-blur-md rounded-full px-3 py-2 border border-border/50 shadow-md items-center gap-1 h-14">
           {navLinks.map((link) => {
             const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+            
+            if (link.disabled) {
+              return (
+                <div
+                  key={link.href}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground/40 cursor-not-allowed flex items-center gap-1.5 select-none"
+                  title="Próximamente"
+                >
+                  {link.label}
+                  <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider">
+                    WIP
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={link.href}
@@ -284,7 +300,7 @@ export function Header() {
                   {user.email}
                 </div>
                 
-                <DropdownMenuItem onClick={() => { router.push(`/perfil/${user.id}`); window.scrollTo(0, 0); }} className="cursor-pointer rounded-lg px-3 py-2.5 text-sm flex items-center gap-2 font-medium">
+                <DropdownMenuItem onClick={() => { router.push(`/perfil/${apodo || user.id}`); window.scrollTo(0, 0); }} className="cursor-pointer rounded-lg px-3 py-2.5 text-sm flex items-center gap-2 font-medium">
                   <User className="size-4 text-muted-foreground" />
                   <span>Ver Perfil</span>
                 </DropdownMenuItem>
@@ -341,6 +357,21 @@ export function Header() {
               <nav className="flex flex-col gap-1 px-4 py-4">
                 {navLinks.map((link) => {
                   const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                  
+                  if (link.disabled) {
+                    return (
+                      <div
+                        key={link.href}
+                        className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground/40 cursor-not-allowed select-none"
+                      >
+                        <span>{link.label}</span>
+                        <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-black uppercase tracking-wider">
+                          WIP
+                        </span>
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={link.href}
