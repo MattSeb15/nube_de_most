@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPerfilById, getArchivosByCreador, getMateriaById } from "@/lib/academic";
+import { getPerfilByUsername, getArchivosByCreador, getMateriaById } from "@/lib/academic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, ChevronRight, Shield, Globe, FileArchive, Users, Edit } from "lucide-react";
+import { ArrowLeft, Clock, ChevronRight, Shield, Globe, FileArchive, Users, Edit, Bookmark } from "lucide-react";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,22 @@ function TwitterIcon({ className }: { className?: string }) {
   );
 }
 
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  );
+}
+
+function LinkedinIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    </svg>
+  );
+}
+
 // ── Helpers ────────────────────────────────────────
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleString("es-EC", {
@@ -44,31 +60,31 @@ function formatFecha(iso: string) {
   });
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const perfil = await getPerfilById(id);
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params;
+  const perfil = await getPerfilByUsername(username);
   if (!perfil) return { title: "Perfil no encontrado | La Nube de Most" };
 
   return {
-    title: `${perfil.apodo || perfil.nombreCompleto} | La Nube de Most`,
-    description: perfil.bio || `Perfil de ${perfil.apodo || perfil.nombreCompleto} en La Nube de Most.`,
+    title: `${perfil.nombreCompleto || perfil.apodo} | La Nube de Most`,
+    description: perfil.bio || `Perfil académico de ${perfil.nombreCompleto || perfil.apodo} en La Nube de Most.`,
   };
 }
 
-export default async function PublicProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
   
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const isOwner = user?.id === id;
-
-  const perfil = await getPerfilById(id);
+  const perfil = await getPerfilByUsername(username);
   
   if (!perfil) {
     notFound();
   }
 
-  const archivos = await getArchivosByCreador(id);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isOwner = user?.id === perfil.id;
+
+  const archivos = await getArchivosByCreador(perfil.id);
   const archivosWithMaterias = await Promise.all(
     archivos.map(async (archivo) => {
       const materia = await getMateriaById(archivo.materiaId);
@@ -81,6 +97,38 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
   const aportesPropios = archivosWithMaterias.filter(a => !a.esColaboracion);
   const colaboraciones = archivosWithMaterias.filter(a => a.esColaboracion);
+
+  let archivosGuardados: any[] = [];
+  if (isOwner) {
+    const { data: guardadosData } = await supabase
+      .from("apuntes_guardados")
+      .select(`
+        archivo_id,
+        archivos_apuntes (
+          id, nombre, tipo, fecha_subida, url_archivo,
+          carpetas_apuntes(materia_id)
+        )
+      `)
+      .eq("usuario_id", user.id);
+
+    if (guardadosData) {
+      const guardadosRaw = guardadosData.map((g: any) => g.archivos_apuntes).filter(Boolean);
+      archivosGuardados = await Promise.all(
+        guardadosRaw.map(async (a: any) => {
+          const mId = a.carpetas_apuntes?.materia_id || (Array.isArray(a.carpetas_apuntes) ? a.carpetas_apuntes[0]?.materia_id : null);
+          const materia = mId ? await getMateriaById(mId) : null;
+          return {
+            id: a.id,
+            nombre: a.nombre,
+            tipo: a.tipo,
+            materiaId: mId,
+            fechaSubida: a.fecha_subida || a.fecha_creacion,
+            materia
+          };
+        })
+      );
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl flex flex-col items-center">
@@ -114,12 +162,12 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
 
         {/* Name & Title */}
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground mb-3">
-          {perfil.apodo || "Estudiante"}
+        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground mb-2">
+          {perfil.nombreCompleto || perfil.apodo || "Estudiante"}
         </h1>
-        <p className="text-lg text-muted-foreground font-medium mb-6">
-          {perfil.nombreCompleto}
-        </p>
+        <h2 className="text-lg sm:text-xl text-muted-foreground font-medium mb-6 font-mono">
+          @{perfil.apodo}
+        </h2>
 
         {/* Badges & Socials */}
         <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
@@ -140,6 +188,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             if (red.icono === "github") Icon = GithubIcon;
             else if (red.icono === "instagram") Icon = InstagramIcon;
             else if (red.icono === "twitter") Icon = TwitterIcon;
+            else if (red.icono === "facebook") Icon = FacebookIcon;
+            else if (red.icono === "linkedin") Icon = LinkedinIcon;
 
             return (
               <a
@@ -297,7 +347,58 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           </section>
         )}
 
-        {aportesPropios.length === 0 && colaboraciones.length === 0 && (
+        {/* Archivos Guardados */}
+        {isOwner && archivosGuardados.length > 0 && (
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <Bookmark className="size-5 text-foreground" />
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                Apuntes Guardados
+              </h2>
+            </div>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              {archivosGuardados.map((archivo) => {
+                const materia = archivo.materia;
+                const materiaSlug = materia?.slug ?? "desconocida";
+                
+                return (
+                  <Link 
+                    key={archivo.id}
+                    href={`/apuntes/nivelacion/${materiaSlug}?archivo=${archivo.id}`}
+                    className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {archivo.nombre}
+                      </h3>
+                    </div>
+                    
+                    <div className="mt-auto flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-2">
+                        {materia && (
+                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold text-white tracking-wide" style={{ backgroundColor: materia.color }}>
+                             <MateriaIcon name={materia.icono} className="size-3" style={{ fill: 'currentColor' }} />
+                             {materia.nombre.toUpperCase()}
+                           </div>
+                        )}
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold bg-muted text-muted-foreground border-0 uppercase tracking-wider">
+                          GUARDADO
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
+                        <Clock className="size-3" />
+                        {formatFecha(archivo.fechaSubida)}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {aportesPropios.length === 0 && colaboraciones.length === 0 && (!isOwner || archivosGuardados.length === 0) && (
           <div className="py-12 border-t border-border/40 w-full flex flex-col items-center justify-center opacity-60">
              <FileArchive className="size-10 text-muted-foreground mb-4" />
              <p className="text-sm font-medium text-muted-foreground">Este usuario aún no tiene aportes en la nube.</p>

@@ -56,6 +56,22 @@ function TwitterIcon({ className }: { className?: string }) {
   );
 }
 
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  );
+}
+
+function LinkedinIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    </svg>
+  );
+}
+
 export default function PerfilPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -81,7 +97,13 @@ export default function PerfilPage() {
   const [github, setGithub] = useState("");
   const [instagram, setInstagram] = useState("");
   const [twitter, setTwitter] = useState("");
+  const [facebook, setFacebook] = useState("");
+  const [linkedin, setLinkedin] = useState("");
   const [web, setWeb] = useState("");
+
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Feedback states
   const [successMsg, setSuccessMsg] = useState("");
@@ -121,6 +143,8 @@ export default function PerfilPage() {
             if (platform.includes("github")) setGithub(red.usuario);
             if (platform.includes("instagram")) setInstagram(red.usuario);
             if (platform.includes("twitter") || platform.includes("x")) setTwitter(red.usuario);
+            if (platform.includes("facebook")) setFacebook(red.usuario);
+            if (platform.includes("linkedin")) setLinkedin(red.usuario);
             if (platform.includes("web") || platform.includes("link") || platform.includes("portfolio")) setWeb(red.url);
           });
         } else {
@@ -148,46 +172,70 @@ export default function PerfilPage() {
     setSuccessMsg("");
     setErrorMsg("");
 
-    // Build the redes jsonb array
-    const newRedes: RedSocial[] = [];
-    if (github.trim()) {
-      newRedes.push({
-        plataforma: "GitHub",
-        usuario: github.trim(),
-        url: `https://github.com/${github.trim().replace("@", "")}`,
-        icono: "github",
-      });
-    }
-    if (instagram.trim()) {
-      newRedes.push({
-        plataforma: "Instagram",
-        usuario: instagram.trim(),
-        url: `https://instagram.com/${instagram.trim().replace("@", "")}`,
-        icono: "instagram",
-      });
-    }
-    if (twitter.trim()) {
-      newRedes.push({
-        plataforma: "Twitter / X",
-        usuario: twitter.trim(),
-        url: `https://x.com/${twitter.trim().replace("@", "")}`,
-        icono: "twitter",
-      });
-    }
-    if (web.trim()) {
-      let webUrl = web.trim();
-      if (!/^https?:\/\//i.test(webUrl)) {
-        webUrl = `https://${webUrl}`;
-      }
-      newRedes.push({
-        plataforma: "Web",
-        usuario: web.trim().replace(/^https?:\/\/(www\.)?/i, ""),
-        url: webUrl,
-        icono: "globe",
-      });
-    }
-
     try {
+      // Validate unique username
+      const res = await fetch(`/api/check-username?username=${encodeURIComponent(apodo)}&exclude=${user.id}`);
+      const data = await res.json();
+      
+      if (!res.ok || !data.available) {
+        throw new Error(data.error || "El nombre de usuario ya está en uso o es inválido.");
+      }
+
+      // Build the redes jsonb array
+      const newRedes: RedSocial[] = [];
+      if (github.trim()) {
+        newRedes.push({
+          plataforma: "GitHub",
+          usuario: github.trim(),
+          url: `https://github.com/${github.trim().replace("@", "")}`,
+          icono: "github",
+        });
+      }
+      if (instagram.trim()) {
+        newRedes.push({
+          plataforma: "Instagram",
+          usuario: instagram.trim(),
+          url: `https://instagram.com/${instagram.trim().replace("@", "")}`,
+          icono: "instagram",
+        });
+      }
+      if (twitter.trim()) {
+        newRedes.push({
+          plataforma: "Twitter / X",
+          usuario: twitter.trim(),
+          url: `https://x.com/${twitter.trim().replace("@", "")}`,
+          icono: "twitter",
+        });
+      }
+      if (facebook.trim()) {
+        newRedes.push({
+          plataforma: "Facebook",
+          usuario: facebook.trim(),
+          url: `https://facebook.com/${facebook.trim().replace("@", "")}`,
+          icono: "facebook",
+        });
+      }
+      if (linkedin.trim()) {
+        newRedes.push({
+          plataforma: "LinkedIn",
+          usuario: linkedin.trim(),
+          url: `https://linkedin.com/in/${linkedin.trim().replace("@", "")}`,
+          icono: "linkedin",
+        });
+      }
+      if (web.trim()) {
+        let webUrl = web.trim();
+        if (!/^https?:\/\//i.test(webUrl)) {
+          webUrl = `https://${webUrl}`;
+        }
+        newRedes.push({
+          plataforma: "Web",
+          usuario: web.trim().replace(/^https?:\/\/(www\.)?/i, ""),
+          url: webUrl,
+          icono: "globe",
+        });
+      }
+
       // Upsert the profile into the perfiles table
       const { error } = await supabase.from("perfiles").upsert({
         id: user.id,
@@ -211,6 +259,25 @@ export default function PerfilPage() {
       setErrorMsg(err.message || "Error al actualizar el perfil.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!newPassword || newPassword.length < 6) return;
+    setIsChangingPassword(true);
+    setSuccessMsg("");
+    setErrorMsg("");
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setSuccessMsg("¡Contraseña actualizada correctamente!");
+      setNewPassword("");
+      setTimeout(() => setSuccessMsg(""), 4000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Error al actualizar la contraseña.");
+    } finally {
+      setIsChangingPassword(false);
     }
   }
 
@@ -279,7 +346,7 @@ export default function PerfilPage() {
       {/* ── Volver al Inicio ── */}
       <div className="mb-6 flex justify-between items-center animate-fade-in stagger-1">
         <Link
-          href={`/perfil/${user.id}`}
+          href={`/perfil/${apodo || user.id}`}
           className="group flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors duration-200"
         >
           <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
@@ -290,9 +357,9 @@ export default function PerfilPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-fade-in stagger-2">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-16 animate-fade-in stagger-2">
         {/* ── Left Column: Avatar and Quick Stats ── */}
-        <div className="md:col-span-4 flex flex-col items-center text-center p-6 rounded-3xl border border-border/60 bg-card/65 backdrop-blur-md shadow-md">
+        <div className="md:col-span-4 flex flex-col items-center text-center px-2 py-4">
           {/* Glowing Avatar */}
           <div className="relative mb-4 group select-none">
             <button 
@@ -385,8 +452,8 @@ export default function PerfilPage() {
         </div>
 
         {/* ── Right Column: Form Fields ── */}
-        <div className="md:col-span-8 p-6 sm:p-8 rounded-3xl border border-border/60 bg-card/65 backdrop-blur-md shadow-md">
-          <div className="mb-6">
+        <div className="md:col-span-8 sm:px-6 py-4">
+          <div className="mb-8">
             <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
               <User className="size-5 text-primary" /> Información de Perfil
             </h1>
@@ -449,7 +516,7 @@ export default function PerfilPage() {
             </div>
 
             {/* Locked fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 border border-border/40 rounded-2xl p-4 select-none">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/10 border-0 rounded-none p-2 select-none border-y border-border/20 my-2">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1">
                   <Lock className="size-3" /> Correo Institucional
@@ -567,6 +634,40 @@ export default function PerfilPage() {
                   </div>
                 </div>
 
+                {/* Facebook */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                    <FacebookIcon className="size-3.5" /> Facebook
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-medium text-muted-foreground/60">@</span>
+                    <input
+                      type="text"
+                      value={facebook}
+                      onChange={(e) => setFacebook(e.target.value)}
+                      placeholder="usuario"
+                      className="w-full rounded-xl border border-border/80 bg-background/50 pl-8 pr-4 py-2.5 text-xs text-foreground placeholder-muted-foreground/50 transition-all duration-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    />
+                  </div>
+                </div>
+
+                {/* LinkedIn */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                    <LinkedinIcon className="size-3.5" /> LinkedIn
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-medium text-muted-foreground/60">@</span>
+                    <input
+                      type="text"
+                      value={linkedin}
+                      onChange={(e) => setLinkedin(e.target.value)}
+                      placeholder="usuario"
+                      className="w-full rounded-xl border border-border/80 bg-background/50 pl-8 pr-4 py-2.5 text-xs text-foreground placeholder-muted-foreground/50 transition-all duration-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    />
+                  </div>
+                </div>
+
                 {/* Web / Portfolio */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
@@ -582,6 +683,43 @@ export default function PerfilPage() {
                       className="w-full rounded-xl border border-border/80 bg-background/50 pl-10 pr-4 py-2.5 text-xs text-foreground placeholder-muted-foreground/50 transition-all duration-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                     />
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-border/40">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 mb-4">
+                <Lock className="size-4 text-primary" /> Seguridad
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Cambiar Contraseña</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Ingresa una nueva contraseña de al menos 6 caracteres.</p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60">
+                      <Lock className="size-3.5" />
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="Nueva contraseña"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full rounded-xl border border-border/80 bg-background/50 pl-10 pr-4 py-2.5 text-xs text-foreground placeholder-muted-foreground/50 transition-all duration-200 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    />
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={handleChangePassword}
+                    disabled={isChangingPassword || !newPassword || newPassword.length < 6}
+                    className="shrink-0 h-[38px] rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all duration-200"
+                  >
+                    {isChangingPassword ? <Loader2 className="size-3.5 animate-spin mr-2" /> : <Lock className="size-3.5 mr-2" />}
+                    <span className="text-xs font-semibold">Actualizar</span>
+                  </Button>
                 </div>
               </div>
             </div>
