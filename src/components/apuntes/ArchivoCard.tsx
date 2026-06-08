@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MouseTooltip } from "@/components/ui/cursor-tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Shield, ChevronRight, Eye } from "lucide-react";
+import { Clock, Shield, ChevronRight, Eye, Users } from "lucide-react";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { Materia } from "@/types";
 
@@ -14,9 +14,11 @@ export interface Archivo {
   urlArchivo: string;
   creador: string;
   creadorId: string;
+  creadorApodo?: string;
   creadorRol: string;
   materia?: Materia;
   vistasCount?: number;
+  colaborativa?: boolean;
 }
 
 interface ArchivoCardProps {
@@ -61,6 +63,11 @@ export function ArchivoCard({ archivo }: ArchivoCardProps) {
                 }`}>
                   {archivo.tipo?.toUpperCase()}
                 </Badge>
+                {archivo.colaborativa && (
+                  <Badge variant="secondary" className="text-[10px] font-medium px-2 py-0.5 rounded-full border-0 transition-colors bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">
+                    <Users className="w-3 h-3" /> COLABORATIVO
+                  </Badge>
+                )}
                 <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                   <Clock className="size-3" />
                   {formatFecha(archivo.fechaSubida)}
@@ -82,7 +89,7 @@ export function ArchivoCard({ archivo }: ArchivoCardProps) {
           <span className="text-xs text-muted-foreground mr-2">Subido por</span>
           <MouseTooltip text={`Ver perfil de ${archivo.creador}`} color={archivo.creadorRol === "admin" ? "#dc2626" : "#3b82f6"}>
             <Link
-              href={`/perfil/${archivo.creadorId || ""}`}
+              href={`/perfil/${archivo.creadorApodo || archivo.creadorId || ""}`}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:scale-105 shadow-sm ${
                 archivo.creadorRol === "admin"
                   ? "bg-red-600 text-white hover:bg-red-700 shadow-red-600/20"

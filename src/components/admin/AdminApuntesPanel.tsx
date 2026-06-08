@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Explorador } from "@/components/apuntes/Explorador";
 import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
+import { DialogoMover } from "@/components/apuntes/DialogoMover";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,6 +39,7 @@ export function AdminApuntesPanel() {
   const [showNotebookViewer, setShowNotebookViewer] = useState<ArchivoApunte | null>(null);
 
   const [deleteConfirmData, setDeleteConfirmData] = useState<{type: 'folder' | 'file', item: any} | null>(null);
+  const [itemToMove, setItemToMove] = useState<{type: 'folder' | 'file', item: any} | null>(null);
   
   // Modals
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -86,12 +88,38 @@ export function AdminApuntesPanel() {
     setLoading(true);
     const parentId = currentFolder ? currentFolder.id : null;
 
-    let foldersQuery = supabase.from("carpetas_apuntes").select("*, perfiles!creador_id(nombre_completo, rol), archivos_apuntes(count)").order("nombre");
-    if (parentId) foldersQuery = foldersQuery.eq("parent_id", parentId);
-    else foldersQuery = foldersQuery.is("parent_id", null).eq("materia_id", selectedMateriaId);
+    let fData: any[] = [];
+    if (selectedMateriaId) {
+      const { data: allFoldersData } = await supabase
+        .from("carpetas_apuntes")
+        .select("*, perfiles!creador_id(nombre_completo, rol), archivos_apuntes(id)")
+        .eq("materia_id", selectedMateriaId)
+        .order("nombre");
 
-    const { data: fData } = await foldersQuery;
-    setFolders(fData || []);
+      const allFolders = allFoldersData || [];
+
+      const calculateTotalFiles = (folderId: string): number => {
+        let total = 0;
+        const folder = allFolders.find((f: any) => f.id === folderId);
+        if (folder && folder.archivos_apuntes) {
+          total += folder.archivos_apuntes.length;
+        }
+        const subfolders = allFolders.filter((f: any) => f.parent_id === folderId);
+        for (const sub of subfolders) {
+          total += calculateTotalFiles(sub.id);
+        }
+        return total;
+      };
+
+      fData = allFolders
+        .filter((f: any) => f.parent_id === parentId)
+        .map((folder: any) => ({
+          ...folder,
+          totalFilesCount: calculateTotalFiles(folder.id)
+        }));
+    }
+
+    setFolders(fData);
 
     if (parentId) {
       const { data: fileData } = await supabase.from("archivos_apuntes").select("*, perfiles!creador_id(nombre_completo, rol)").eq("carpeta_id", parentId).order("nombre");
@@ -427,6 +455,7 @@ export function AdminApuntesPanel() {
                 setItemToRename({ type, item });
                 setRenameValue(item.nombre);
               }}
+              onMoveClick={(type, item) => setItemToMove({ type, item })}
               onDeleteClick={(type, item) => setDeleteConfirmData({ type, item })}
               onToggleCollaborative={handleToggleCollaborative}
               selectedFile={showPdfViewer || showNotebookViewer}
@@ -479,6 +508,33 @@ export function AdminApuntesPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DialogoMover
+        isOpen={!!itemToMove}
+        onClose={() => setItemToMove(null)}
+        itemToMove={itemToMove}
+        onConfirm={async (newMateriaId, newFolderId) => {
+          if (!itemToMove) return;
+          setLoading(true);
+          const { type, item } = itemToMove;
+          if (type === 'folder') {
+            await supabase
+              .from('carpetas_apuntes')
+              .update({ materia_id: newMateriaId, parent_id: newFolderId })
+              .eq('id', item.id);
+          } else {
+            await supabase
+              .from('archivos_apuntes')
+              .update({ carpeta_id: newFolderId })
+              .eq('id', item.id);
+              
+            if (showNotebookViewer?.id === item.id) setShowNotebookViewer(null);
+            if (showPdfViewer?.id === item.id) setShowPdfViewer(null);
+          }
+          setItemToMove(null);
+          fetchContents();
+        }}
+      />
     </div>
   );
 }
