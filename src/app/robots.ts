@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin/", "/auth/", "/perfil/"],
+      disallow: ["/admin/", "/auth/", "/perfil/editar/", "/actividades/"],
     },
     sitemap: "https://www.mostcloud.space/sitemap.xml",
   };

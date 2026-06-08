@@ -1,5 +1,5 @@
 import { MetadataRoute } from "next";
-import { getSemestres, getAllMaterias, getActividades } from "@/lib/academic";
+import { getSemestres, getAllMaterias, getAllUsernames } from "@/lib/academic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.mostcloud.space";
@@ -33,10 +33,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // Rutas dinámicas
-  const [semestres, materias, actividades] = await Promise.all([
+  const [semestres, materias, usernames] = await Promise.all([
     getSemestres(),
     getAllMaterias(),
-    getActividades(),
+    getAllUsernames(),
   ]);
 
   const semestresRoutes: MetadataRoute.Sitemap = semestres.map((semestre) => ({
@@ -53,12 +53,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  const actividadesRoutes: MetadataRoute.Sitemap = actividades.map((actividad) => ({
-    url: `${baseUrl}/actividades/${actividad.slug}`,
-    lastModified: new Date(actividad.fechaEntrega || Date.now()),
-    changeFrequency: "monthly",
-    priority: 0.6,
+
+
+  const perfilesRoutes: MetadataRoute.Sitemap = usernames.map((username) => ({
+    url: `${baseUrl}/perfil/${username}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.8,
   }));
 
-  return [...staticRoutes, ...semestresRoutes, ...materiasRoutes, ...actividadesRoutes];
+  return [...staticRoutes, ...semestresRoutes, ...materiasRoutes, ...perfilesRoutes];
 }
