@@ -215,6 +215,7 @@ export async function getLatestArchivos(limit: number = 4): Promise<any[]> {
     urlArchivo: a.url_archivo,
     creador: a.perfiles ? (a.perfiles.apodo || a.perfiles.nombre_completo) : "Anónimo",
     creadorId: a.perfiles?.id || a.creador_id,
+    creadorApodo: a.perfiles?.apodo || null,
     creadorRol: a.perfiles?.rol || "usuario",
     vistasCount: a.vistas || 0,
   }));
@@ -536,7 +537,32 @@ export async function deleteProfesor(id: string): Promise<boolean> {
 
 // ── PERFILES PÚBLICOS Y APORTES ──
 
-export async function getPerfilById(id: string): Promise<PerfilUsuario | null> {
+export async function getPerfilByUsername(username: string): Promise<(PerfilUsuario & { id: string }) | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("perfiles")
+    .select("*")
+    .eq("apodo", username)
+    .single();
+
+  console.log("getPerfilByUsername debug -> username:", username, "| error:", error?.message, "| found data:", !!data);
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    nombreCompleto: data.nombre_completo,
+    apodo: data.apodo,
+    rol: data.rol,
+    bio: data.bio,
+    redes: data.redes || [],
+    avatar_url: data.avatar_url,
+  };
+}
+
+export async function getPerfilById(id: string): Promise<(PerfilUsuario & { id: string }) | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("perfiles")
@@ -545,29 +571,11 @@ export async function getPerfilById(id: string): Promise<PerfilUsuario | null> {
     .single();
 
   if (error || !data) {
-    // Si no existe el perfil en la base de datos, lo intentamos crear para que no de 404
-    const defaultProfile = {
-      id: id,
-      nombre_completo: "Usuario " + id.substring(0, 4),
-      apodo: "Usuario",
-      rol: "estudiante",
-      bio: "Este usuario de la nube aún no ha configurado su perfil.",
-    };
-
-    // Intentamos insertarlo silenciosamente (podría fallar por RLS, pero está bien)
-    await supabase.from("perfiles").insert([defaultProfile]);
-
-    return {
-      nombreCompleto: defaultProfile.nombre_completo,
-      apodo: defaultProfile.apodo,
-      rol: defaultProfile.rol,
-      bio: defaultProfile.bio,
-      redes: [],
-      avatar_url: undefined,
-    };
+    return null;
   }
 
   return {
+    id: data.id,
     nombreCompleto: data.nombre_completo,
     apodo: data.apodo,
     rol: data.rol,
@@ -633,6 +641,7 @@ export async function getArchivosByCreador(creadorId: string): Promise<any[]> {
     urlArchivo: a.url_archivo,
     creador: a.perfiles ? (a.perfiles.apodo || a.perfiles.nombre_completo) : "Anónimo",
     creadorId: a.perfiles?.id || a.creador_id,
+    creadorApodo: a.perfiles?.apodo || null,
     creadorRol: a.perfiles?.rol || "usuario",
     esColaboracion: a.esColaboracion || false,
     vistasCount: a.vistas || 0,
@@ -644,6 +653,7 @@ export async function getLatestUsers(limit: number = 10): Promise<any[]> {
   const { data, error } = await supabase
     .from("perfiles")
     .select("id, nombre_completo, apodo, avatar_url")
+    .not("apodo", "is", null)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -652,6 +662,20 @@ export async function getLatestUsers(limit: number = 10): Promise<any[]> {
     return [];
   }
   return data;
+}
+
+export async function getAllUsernames(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("perfiles")
+    .select("apodo")
+    .not("apodo", "is", null);
+
+  if (error) {
+    console.error("Error fetching usernames:", error.message);
+    return [];
+  }
+  return data.map((u: any) => u.apodo);
 }
 
 // ── ROADMAP FEATURES ──
