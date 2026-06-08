@@ -1,0 +1,347 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { VisorPDF } from "@/components/apuntes/VisorPDF";
+import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
+import { Download, ThumbsUp, ThumbsDown, Bookmark, Share, MoreHorizontal, FileText, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { toggleLikeDislike, toggleSave } from "../../acciones";
+
+export default function DocumentViewClient({ 
+  file, 
+  currentUser,
+  initialLikes = 0,
+  initialDislikes = 0,
+  initialInteraction = null,
+  initialIsSaved = false
+}: { 
+  file: any, 
+  currentUser: any,
+  initialLikes?: number,
+  initialDislikes?: number,
+  initialInteraction?: 'like' | 'dislike' | null,
+  initialIsSaved?: boolean
+}) {
+  const router = useRouter();
+  const [isScrolled, setIsScrolled] = useState(false);
+  
+  const [likes, setLikes] = useState(initialLikes);
+  const [dislikes, setDislikes] = useState(initialDislikes);
+  const [interaction, setInteraction] = useState<'like' | 'dislike' | null>(initialInteraction);
+  const [isSaved, setIsSaved] = useState(initialIsSaved);
+  const [isPending, setIsPending] = useState(false);
+  const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [showCollabs, setShowCollabs] = useState(false);
+  
+  const handleLike = async () => {
+    if (!currentUser) return;
+    if (isPending) return;
+    setIsPending(true);
+    const prevInteraction = interaction;
+    let newLikes = likes;
+    let newDislikes = dislikes;
+    if (interaction === 'like') {
+      newLikes--;
+      setInteraction(null);
+    } else {
+      if (interaction === 'dislike') newDislikes--;
+      newLikes++;
+      setInteraction('like');
+    }
+    setLikes(newLikes);
+    setDislikes(newDislikes);
+    const res = await toggleLikeDislike(file.id, 'like');
+    if (res?.error) {
+      setInteraction(prevInteraction);
+      setLikes(likes);
+      setDislikes(dislikes);
+    }
+    setIsPending(false);
+  };
+
+  const handleDislike = async () => {
+    if (!currentUser) return;
+    if (isPending) return;
+    setIsPending(true);
+    const prevInteraction = interaction;
+    let newLikes = likes;
+    let newDislikes = dislikes;
+    if (interaction === 'dislike') {
+      newDislikes--;
+      setInteraction(null);
+    } else {
+      if (interaction === 'like') newLikes--;
+      newDislikes++;
+      setInteraction('dislike');
+    }
+    setLikes(newLikes);
+    setDislikes(newDislikes);
+    const res = await toggleLikeDislike(file.id, 'dislike');
+    if (res?.error) {
+      setInteraction(prevInteraction);
+      setLikes(likes);
+      setDislikes(dislikes);
+    }
+    setIsPending(false);
+  };
+
+  const handleSave = async () => {
+    if (!currentUser) return;
+    if (isPending) return;
+    setIsPending(true);
+    const prevSaved = isSaved;
+    setIsSaved(!isSaved);
+    const res = await toggleSave(file.id);
+    if (res?.error) {
+      setIsSaved(prevSaved);
+    }
+    setIsPending(false);
+  };
+
+  const dateStr = file.created_at || file.fecha_subida || file.fechaSubida || file.fecha_creacion;
+  const materia = file.carpetas_apuntes?.materias;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 150);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isPdf = file.tipo === "pdf";
+  const isCuaderno = file.tipo === "cuaderno";
+  const isSpecialBg = isPdf || isCuaderno;
+
+  const getHeaderBg = () => {
+    if (isPdf) return "bg-[#e5252a] dark:bg-[#c11c1f] text-white border-transparent";
+    if (isCuaderno) return "bg-[#7e22ce] dark:bg-[#581c87] text-white border-transparent";
+    return "bg-transparent border-border text-foreground";
+  };
+
+  const getFloatingBg = () => {
+    if (isPdf) return "bg-[#e5252a]/95 dark:bg-[#c11c1f]/95 border-red-500/50 text-white";
+    if (isCuaderno) return "bg-[#7e22ce]/95 dark:bg-[#581c87]/95 border-purple-500/50 text-white";
+    return "bg-background/90 border-border text-foreground";
+  };
+
+  const headerBg = getHeaderBg();
+  const floatingBg = getFloatingBg();
+  const textMuted = isSpecialBg ? "text-white/80" : "text-muted-foreground";
+  const textLink = isSpecialBg ? "text-white font-semibold hover:text-white/90 underline-offset-4 hover:underline transition-colors" : "text-primary hover:underline font-medium transition-colors";
+  const iconBg = isSpecialBg ? "bg-white/20 text-white" : "bg-primary/10 text-primary";
+  const btnGhost = isSpecialBg ? "text-white hover:text-white hover:bg-white/20" : "text-neutral-600 dark:text-neutral-300 hover:bg-muted";
+  const likeBtnBg = isSpecialBg ? "bg-white/10" : "bg-muted";
+  const likeBtnGhost = isSpecialBg ? "hover:bg-white/20 text-white" : "text-green-600 hover:text-green-700 hover:bg-green-50/50";
+  const dislikeBtnGhost = isSpecialBg ? "hover:bg-white/20 text-white" : "text-red-600 hover:text-red-700 hover:bg-red-50/50";
+  const likeDivider = isSpecialBg ? "bg-white/20" : "bg-border";
+  const handleDownload = async () => {
+    const url = file.urlArchivo || file.url_archivo;
+    if (!url) return;
+
+    try {
+      const proxiedUrl = `/api/proxy-pdf?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxiedUrl);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = blobUrl;
+      a.download = `${file.nombre}${isPdf ? ".pdf" : ""}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    } catch (e) {
+      // Fallback
+      const a = document.createElement("a");
+      a.href = url + "?download=";
+      a.download = `${file.nombre}`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  return (
+    <main className="bg-background min-h-screen">
+      {/* Floating Mini Header */}
+      <div 
+        className={cn(
+          "fixed top-[72px] sm:top-[80px] left-0 right-0 z-40 mx-auto w-full max-w-7xl transition-all duration-300 pointer-events-none px-2 sm:px-4",
+          isScrolled ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+        )}
+      >
+        <div className={cn("backdrop-blur-md border shadow-md rounded-2xl p-2 sm:p-3 flex items-center justify-between gap-4 pointer-events-auto", floatingBg)}>
+          <div className="flex-1 min-w-0 flex items-center gap-3">
+            <div className={cn("hidden sm:flex h-8 w-8 rounded-full items-center justify-center shrink-0", iconBg)}>
+               <FileText className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-sm sm:text-base font-bold truncate leading-tight">
+                {file.nombre}
+              </h2>
+              <div className={cn("flex items-center gap-2 text-[10px] sm:text-xs mt-0.5", textMuted)}>
+                {materia && (
+                  <Link href={`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className="truncate font-medium hover:text-white hover:underline transition-colors">
+                    {materia.nombre}
+                  </Link>
+                )}
+                <span className="hidden sm:inline">•</span>
+                <Link href={`/perfil/${file.perfiles?.apodo || file.perfiles?.id || file.creador_id}`} className="hidden sm:flex items-center gap-1.5 hover:text-white hover:underline transition-colors group">
+                  {file.perfiles?.avatar_url && (
+                    <img src={file.perfiles.avatar_url} alt={file.perfiles.nombre_completo} className="w-4 h-4 rounded-full object-cover group-hover:ring-1 group-hover:ring-white transition-all" />
+                  )}
+                  <span className="truncate">{file.perfiles?.nombre_completo || "Usuario anónimo"}</span>
+                </Link>
+                <span className="hidden sm:inline">•</span>
+                <span className="font-medium capitalize truncate">
+                  {dateStr ? format(new Date(dateStr), "d MMM yyyy, HH:mm", { locale: es }) : "2024"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className={cn("hidden sm:flex items-center rounded-full mr-1 h-8", likeBtnBg)}>
+              <Button onClick={handleLike} variant="ghost" size="sm" className={cn("rounded-l-full px-2 h-full transition-colors", interaction === 'like' ? (isPdf ? "bg-white/30 text-white" : "bg-green-100 text-green-700") : likeBtnGhost)}>
+                <ThumbsUp className={cn("w-3.5 h-3.5", interaction === 'like' && "fill-current")} /> {likes > 0 && <span className="ml-1.5 text-xs">{likes}</span>}
+              </Button>
+              <div className={cn("w-[1px] h-3", likeDivider)}></div>
+              <Button onClick={handleDislike} variant="ghost" size="sm" className={cn("rounded-r-full px-2 h-full transition-colors", interaction === 'dislike' ? (isPdf ? "bg-white/30 text-white" : "bg-red-100 text-red-700") : dislikeBtnGhost)}>
+                <ThumbsDown className={cn("w-3.5 h-3.5", interaction === 'dislike' && "fill-current")} /> {dislikes > 0 && <span className="ml-1.5 text-xs">{dislikes}</span>}
+              </Button>
+            </div>
+            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("hidden sm:flex rounded-full h-8 px-3 transition-colors", isSaved ? (isPdf ? "bg-white/30 text-white" : "bg-primary/10 text-primary dark:bg-primary/20") : btnGhost)}>
+              <Bookmark className={cn("w-3.5 h-3.5 mr-1.5", isSaved && "fill-current")} /> <span className="text-xs">{isSaved ? "Saved" : "Save"}</span>
+            </Button>
+            <Button onClick={handleDownload} size="sm" className={cn("bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-sm px-4 h-8 text-xs", isSpecialBg && "shadow-none border border-green-500")}>
+              <Download className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Download</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Header Estilo Imagen 2 */}
+      <header className={cn("z-30 border-b px-4 py-4 sm:px-6 flex flex-col gap-3 relative transition-colors shrink-0", headerBg, isSpecialBg && "-mt-[88px] pt-[120px]")}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold leading-tight truncate">
+              {file.nombre}
+            </h1>
+            <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-xs sm:text-sm", textMuted)}>
+              {materia && (
+                <div className="flex items-center gap-1.5">
+                  <span>Materia:</span>
+                  <Link href={`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className={textLink}>
+                    {materia.nombre}
+                  </Link>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-1.5 group cursor-pointer relative">
+                {file.perfiles?.avatar_url ? (
+                  <img src={file.perfiles.avatar_url} alt="Avatar" className="w-5 h-5 rounded-full object-cover border border-white/20 group-hover:border-white transition-colors" />
+                ) : (
+                  <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold group-hover:bg-white/30 transition-colors", iconBg)}>
+                    {file.perfiles?.nombre_completo?.[0] || 'U'}
+                  </div>
+                )}
+                <Link href={`/perfil/${file.perfiles?.apodo || file.creador_id}`} className={textLink}>
+                  {file.perfiles?.nombre_completo || "Usuario anónimo"}
+                </Link>
+                {collaborators.length > 0 && (
+                  <div className="relative ml-2">
+                    <button onClick={() => setShowCollabs(!showCollabs)} className={cn("flex items-center gap-1 text-[10px] sm:text-xs px-2 py-0.5 rounded-full transition-colors border", isSpecialBg ? "bg-white/10 hover:bg-white/20 border-white/20 text-white" : "bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary")}>
+                      <Users className="w-3 h-3" />
+                      <span>+{collaborators.length} colaborador{collaborators.length !== 1 && 'es'}</span>
+                    </button>
+                    
+                    {showCollabs && (
+                      <div className="absolute top-full left-0 mt-2 w-48 bg-background rounded-xl shadow-xl border border-border p-2 z-50 animate-fade-in text-foreground cursor-default">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground px-2 py-1 mb-1 border-b border-border">Colaboradores</p>
+                        <div className="flex flex-col max-h-40 overflow-y-auto">
+                          {collaborators.map((c, i) => (
+                            <Link key={i} href={`/perfil/${c.apodo || c.id}`} className="flex items-center gap-2 p-1.5 hover:bg-muted rounded-lg transition-colors">
+                              {c.avatar_url ? (
+                                <img src={c.avatar_url} className="w-5 h-5 rounded-full object-cover" alt="" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full bg-muted-foreground/20 flex items-center justify-center text-[10px] font-bold">
+                                  {c.nombre_completo?.[0] || 'U'}
+                                </div>
+                              )}
+                              <span className="text-xs font-medium truncate">{c.nombre_completo}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium capitalize">{dateStr ? format(new Date(dateStr), "d MMM yyyy, HH:mm", { locale: es }) : "2024"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Bar */}
+        <div className="flex items-center justify-between overflow-x-auto pb-1 scrollbar-hide">
+          <Button 
+            onClick={isPdf ? handleDownload : undefined}
+            disabled={!isPdf}
+            className={cn(
+              "rounded-full font-bold shadow-sm px-6 shrink-0", 
+              isPdf 
+                ? cn("bg-green-600 hover:bg-green-700 text-white", isSpecialBg && "shadow-none border border-green-500")
+                : isSpecialBg 
+                  ? "bg-white/20 text-white/70 cursor-not-allowed"
+                  : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 cursor-not-allowed"
+            )}
+          >
+            <Download className="w-4 h-4 mr-2" /> 
+            {isPdf ? "Descargar" : "Descargar (WIP)"}
+          </Button>
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className={cn("flex items-center rounded-full mr-2", likeBtnBg)}>
+              <Button onClick={handleLike} variant="ghost" size="sm" className={cn("rounded-l-full px-3 transition-colors", interaction === 'like' ? (isPdf ? "bg-white/30 text-white" : "bg-green-100 text-green-700") : likeBtnGhost)}>
+                <ThumbsUp className={cn("w-4 h-4 mr-1.5", interaction === 'like' && "fill-current")} /> {likes}
+              </Button>
+              <div className={cn("w-[1px] h-4", likeDivider)}></div>
+              <Button onClick={handleDislike} variant="ghost" size="sm" className={cn("rounded-r-full px-3 transition-colors", interaction === 'dislike' ? (isPdf ? "bg-white/30 text-white" : "bg-red-100 text-red-700") : dislikeBtnGhost)}>
+                <ThumbsDown className={cn("w-4 h-4 mr-1.5", interaction === 'dislike' && "fill-current")} /> {dislikes}
+              </Button>
+            </div>
+            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", isSaved ? (isPdf ? "bg-red-600 hover:bg-red-700 text-white shadow-sm" : "bg-purple-600 hover:bg-purple-700 text-white shadow-sm") : btnGhost)}>
+              <Bookmark className={cn("w-4 h-4 mr-2", isSaved && "fill-current")} /> {isSaved ? "Guardado" : "Guardar"}
+            </Button>
+
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Viewer */}
+      <div className={cn("w-full mx-auto", isSpecialBg ? "max-w-none p-0" : "max-w-6xl p-4 sm:p-6 mb-8 mt-2")}>
+        {file.tipo === "pdf" ? (
+          <VisorPDF 
+            file={file} 
+            onClose={() => router.back()} 
+            interaction={interaction}
+            onLike={handleLike}
+            onDislike={handleDislike}
+          />
+        ) : (
+          <VisorCuaderno file={file} onClose={() => router.back()} currentUserId={currentUser?.id} isAdmin={currentUser?.rol === 'admin'} onCollaboratorsLoad={setCollaborators} />
+        )}
+      </div>
+    </main>
+  );
+}
