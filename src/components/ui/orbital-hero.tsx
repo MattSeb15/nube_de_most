@@ -69,8 +69,11 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
           <h1 className="text-5xl sm:text-7xl md:text-[5.5rem] font-extrabold tracking-tighter text-foreground mb-4">
             La Nube de Most
           </h1>
-          <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl font-medium mb-10">
+          <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl font-medium mb-2">
             Tu espacio para la inspiración
+          </p>
+          <p className="text-sm sm:text-base text-muted-foreground/80 max-w-2xl font-medium mb-10">
+            Apuntes de la carrera de Ingeniería en Software, Universidad Técnica de Ambato
           </p>
         </div>
       </section>
@@ -211,7 +214,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
                     className="relative group cursor-pointer"
                   >
                     <MouseTooltip text={u.apodo || u.nombre_completo || "Usuario"}>
-                      <Link href={`/perfil/${u.id}`} className="block">
+                      <Link href={`/perfil/${u.apodo || u.id}`} className="block">
                         <Avatar className="shadow-lg border-2 border-primary/20 hover:border-primary/50 transition-colors" style={{ width: size, height: size }}>
                           {u.avatar_url && (
                             <AvatarImage src={u.avatar_url} alt={u.nombre_completo} />
@@ -256,8 +259,11 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <p className="text-xl sm:text-3xl text-foreground font-medium mb-12 tracking-tight">
+          <p className="text-xl sm:text-3xl text-foreground font-medium mb-4 tracking-tight">
             Tu espacio para la inspiración
+          </p>
+          <p className="text-base sm:text-xl text-muted-foreground font-medium mb-12 tracking-tight max-w-2xl mx-auto">
+            Apuntes de la carrera de Ingeniería en Software, Universidad Técnica de Ambato
           </p>
         </motion.div>
 
