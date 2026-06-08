@@ -1151,7 +1151,7 @@ function AdminDashboardContent() {
 
   if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-neutral-955 flex flex-col justify-center items-center">
+      <div className="min-h-screen bg-neutral-950 flex flex-col justify-center items-center">
         <div className="flex items-center gap-3 text-neutral-400 animate-pulse">
           <Loader2 className="size-6 animate-spin text-primary" />
           <span className="font-semibold text-sm">Verificando credenciales de control...</span>
@@ -1169,7 +1169,7 @@ function AdminDashboardContent() {
       <aside className="w-full md:w-64 dark:bg-neutral-900 bg-white border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-800 flex flex-col justify-between shrink-0 select-none text-neutral-800 dark:text-neutral-200 md:h-full md:overflow-y-auto transition-colors duration-200">
         <div>
           {/* Logo header */}
-          <div className="p-6 border-b border-neutral-250 dark:border-neutral-800 flex items-center justify-between">
+          <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 text-neutral-900 dark:text-white hover:opacity-85 transition-opacity">
               <div className="size-6 rounded-md bg-primary flex items-center justify-center">
                 <Shield className="size-3.5 text-white" />
@@ -1179,7 +1179,7 @@ function AdminDashboardContent() {
           </div>
 
           {/* Quick status bar */}
-          <div className="px-6 py-4 border-b border-neutral-250 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-955/20 flex items-center gap-2.5">
+          <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/20 flex items-center gap-2.5">
             <div className="size-2 rounded-full bg-primary animate-pulse shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-[9px] uppercase tracking-wider font-extrabold text-neutral-400 dark:text-neutral-500">Administrador</span>
@@ -1298,7 +1298,7 @@ function AdminDashboardContent() {
         </div>
 
         {/* Footer Sidebar with Logout */}
-        <div className="p-4 border-t border-neutral-250 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-955/10">
+        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/10">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 transition-all duration-200 cursor-pointer"
@@ -1310,7 +1310,7 @@ function AdminDashboardContent() {
       </aside>
 
       {/* ─── MAIN WORKSPACE (Theme Adaptive) ─── */}
-      <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-955 bg-neutral-50 transition-colors duration-200 md:h-full md:overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 dark:bg-neutral-950 bg-neutral-50 transition-colors duration-200 md:h-full md:overflow-hidden">
         {/* Workspace Toolbar Header */}
         <header className="px-8 py-5 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/10 flex justify-between items-center select-none shrink-0">
           <div>
@@ -1472,7 +1472,7 @@ function AdminDashboardContent() {
                                       <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 truncate">{s.id}</span>
                                     </div>
                                   </td>
-                                  <td className="px-5 py-3.5 font-mono text-neutral-550 dark:text-neutral-400">@{s.apodo || "sin alias"}</td>
+                                  <td className="px-5 py-3.5 font-mono text-neutral-500 dark:text-neutral-400">@{s.apodo || "sin alias"}</td>
                                   <td className="px-5 py-3.5">
                                     {isStudentAdmin ? (
                                       <span className="inline-flex items-center gap-1 text-[8.5px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-0.5">
@@ -1711,7 +1711,7 @@ function AdminDashboardContent() {
                                 value={searchSemestre}
                                 onChange={(e) => setSearchSemestre(e.target.value)}
                                 placeholder="Buscar por nombre o periodo..."
-                                className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 pl-10 pr-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 transition-all outline-none focus:border-primary"
+                                className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 pl-10 pr-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 transition-all outline-none focus:border-primary"
                               />
                             </div>
                             
@@ -1817,7 +1817,7 @@ function AdminDashboardContent() {
                                 value={searchProfesor}
                                 onChange={(e) => setSearchProfesor(e.target.value)}
                                 placeholder="Buscar por nombre..."
-                                className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 pl-10 pr-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 transition-all outline-none focus:border-primary"
+                                className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 pl-10 pr-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 transition-all outline-none focus:border-primary"
                               />
                             </div>
                             
@@ -1935,7 +1935,7 @@ function AdminDashboardContent() {
                                   required
                                   value={editingItem.semestre_id || ""}
                                   onChange={(e) => setEditingItem({ ...editingItem, semestre_id: e.target.value })}
-                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                                 >
                                   <option value="" disabled>Selecciona un Semestre</option>
                                   {semestresList.map(s => (
@@ -1965,7 +1965,7 @@ function AdminDashboardContent() {
                                       slug: editingItem.isNew ? computedSlug : editingItem.slug
                                     });
                                   }}
-                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                                 />
                               </div>
 
@@ -1976,7 +1976,7 @@ function AdminDashboardContent() {
                                   required
                                   value={editingItem.slug}
                                   onChange={(e) => setEditingItem({ ...editingItem, slug: e.target.value })}
-                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                                 />
                               </div>
                             </div>
@@ -2105,7 +2105,7 @@ function AdminDashboardContent() {
                                   required
                                   value={editingItem.slug}
                                   onChange={(e) => setEditingItem({ ...editingItem, slug: e.target.value })}
-                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                                 />
                               </div>
                             </div>
@@ -2128,7 +2128,7 @@ function AdminDashboardContent() {
                                   required
                                   value={editingItem.semestre_id || ""}
                                   onChange={(e) => setEditingItem({ ...editingItem, semestre_id: e.target.value })}
-                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                                 >
                                   <option value="" disabled>Selecciona un Semestre</option>
                                   {semestresList.map(s => (
@@ -2142,7 +2142,7 @@ function AdminDashboardContent() {
                                 <select
                                   value={editingItem.profesor_id || ""}
                                   onChange={(e) => setEditingItem({ ...editingItem, profesor_id: e.target.value || null })}
-                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                                 >
                                   <option value="">Sin Profesor Asignado</option>
                                   {profesoresList.map(p => (
@@ -2192,7 +2192,7 @@ function AdminDashboardContent() {
                                     type="text"
                                     value={editingItem.color || "#ef4444"}
                                     onChange={(e) => setEditingItem({ ...editingItem, color: e.target.value })}
-                                    className="flex-1 rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                                    className="flex-1 rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                                   />
                                 </div>
                               </div>
@@ -2204,7 +2204,7 @@ function AdminDashboardContent() {
                                 rows={4}
                                 value={editingItem.descripcion || ""}
                                 onChange={(e) => setEditingItem({ ...editingItem, descripcion: e.target.value })}
-                                className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none resize-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none resize-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                               />
                             </div>
 
@@ -2302,7 +2302,7 @@ function AdminDashboardContent() {
 
                                       value={editingItem.fecha_inicio || ""}
                                       onChange={(e) => setEditingItem({ ...editingItem, fecha_inicio: e.target.value })}
-                                      className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                      className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                                     />
                                   </div>
                                   <div className="flex-1 space-y-1.5">
@@ -2312,7 +2312,7 @@ function AdminDashboardContent() {
 
                                       value={editingItem.fecha_fin || ""}
                                       onChange={(e) => setEditingItem({ ...editingItem, fecha_fin: e.target.value })}
-                                      className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                      className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                                     />
                                   </div>
                                 </div>
@@ -2498,7 +2498,7 @@ function AdminDashboardContent() {
                                           <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 truncate">slug: {act.slug}</span>
                                         </div>
                                       </td>
-                                      <td className="px-5 py-3.5 text-neutral-850 dark:text-neutral-300">
+                                      <td className="px-5 py-3.5 text-neutral-800 dark:text-neutral-300">
                                         {materiaMap[act.materia_id] || "Materia"}
                                       </td>
                                       <td className="px-5 py-3.5 font-mono text-neutral-800 dark:text-neutral-300">
@@ -2880,7 +2880,7 @@ function AdminDashboardContent() {
                           required
                           value={sobreMiName}
                           onChange={(e) => setSobreMiName(e.target.value)}
-                          className="w-full rounded-xl border border-neutral-350 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary"
+                          className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary"
                         />
                       </div>
 
@@ -2891,7 +2891,7 @@ function AdminDashboardContent() {
                           required
                           value={sobreMiNickname}
                           onChange={(e) => setSobreMiNickname(e.target.value)}
-                          className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary"
+                          className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary"
                         />
                       </div>
                     </div>
@@ -2917,7 +2917,7 @@ function AdminDashboardContent() {
                         {/* GitHub del Proyecto */}
                         <div className="space-y-1.5 sm:col-span-2">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                            <GithubIcon className="size-3.5 text-neutral-550 dark:text-neutral-400" /> GitHub del Proyecto
+                            <GithubIcon className="size-3.5 text-neutral-500 dark:text-neutral-400" /> GitHub del Proyecto
                           </label>
                           <input
                             type="text"
@@ -2931,7 +2931,7 @@ function AdminDashboardContent() {
                         {/* GitHub */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                            <GithubIcon className="size-3.5 text-neutral-550 dark:text-neutral-400" /> GitHub
+                            <GithubIcon className="size-3.5 text-neutral-500 dark:text-neutral-400" /> GitHub
                           </label>
                           <input
                             type="text"
@@ -2945,7 +2945,7 @@ function AdminDashboardContent() {
                         {/* Instagram */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                            <InstagramIcon className="size-3.5 text-neutral-550 dark:text-neutral-400" /> Instagram
+                            <InstagramIcon className="size-3.5 text-neutral-500 dark:text-neutral-400" /> Instagram
                           </label>
                           <input
                             type="text"
@@ -2959,21 +2959,21 @@ function AdminDashboardContent() {
                         {/* Twitter / X */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                            <TwitterIcon className="size-3.5 text-neutral-550 dark:text-neutral-400" /> Twitter / X
+                            <TwitterIcon className="size-3.5 text-neutral-500 dark:text-neutral-400" /> Twitter / X
                           </label>
                           <input
                             type="text"
                             value={sobreMiTwitter}
                             onChange={(e) => setSobreMiTwitter(e.target.value)}
                             placeholder="usuario"
-                            className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-955 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary"
+                            className="w-full rounded-xl border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-4 py-2.5 text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-primary"
                           />
                         </div>
 
                         {/* Portfolio Web */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-                            <Globe className="size-3.5 text-neutral-550 dark:text-neutral-400" /> Portafolio Web / URL
+                            <Globe className="size-3.5 text-neutral-500 dark:text-neutral-400" /> Portafolio Web / URL
                           </label>
                           <input
                             type="text"
@@ -3314,7 +3314,7 @@ function AdminDashboardContent() {
 export default function AdminDashboardPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-neutral-955 flex flex-col justify-center items-center">
+      <div className="min-h-screen bg-neutral-950 flex flex-col justify-center items-center">
         <div className="flex items-center gap-3 text-neutral-400 animate-pulse">
           <span className="font-semibold text-sm">Cargando consola...</span>
         </div>

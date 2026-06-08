@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Sparkles,
   BookOpen,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +32,8 @@ export default function LoginPage() {
   const [isPending, startTransition] = useTransition();
 
   // Authentication mode: unified state
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [displayMode, setDisplayMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
+  const [displayMode, setDisplayMode] = useState<"login" | "register" | "forgot">("login");
   const [isFading, setIsFading] = useState(false);
 
   // Sync mode with URL query parameter on mount and state change
@@ -40,13 +41,13 @@ export default function LoginPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const queryMode = params.get("mode");
-      const targetMode = queryMode === "register" ? "register" : "login";
+      const targetMode = queryMode === "register" ? "register" : queryMode === "forgot" ? "forgot" : "login";
       setMode(targetMode);
       setDisplayMode(targetMode);
     }
   }, []);
 
-  const handleModeChange = (newMode: "login" | "register") => {
+  const handleModeChange = (newMode: "login" | "register" | "forgot") => {
     if (newMode === displayMode) return;
 
     setIsFading(true);
@@ -160,6 +161,36 @@ export default function LoginPage() {
     });
   }
 
+  // Handle Forgot Password
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+    setEmailError(false);
+
+    if (!emailPrefix) {
+      setEmailError(true);
+      triggerShake();
+      return;
+    }
+
+    const fullEmail = `${emailPrefix.trim()}@uta.edu.ec`;
+
+    startTransition(async () => {
+      const { error } = await supabase.auth.resetPasswordForEmail(fullEmail, {
+        redirectTo: `${window.location.origin}/actualizar-password`,
+      });
+
+      if (error) {
+        triggerShake();
+        setErrorMsg(error.message);
+        return;
+      }
+
+      setSuccessMsg("Correo de recuperación enviado. Revisa tu bandeja de entrada.");
+    });
+  }
+
   // Handle Registration
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -203,6 +234,23 @@ export default function LoginPage() {
     const fullEmail = `${emailPrefix.trim()}@uta.edu.ec`;
 
     startTransition(async () => {
+      // First check if username is available
+      try {
+        const res = await fetch(`/api/check-username?username=${encodeURIComponent(apodo)}`);
+        const result = await res.json();
+        
+        if (!res.ok || !result.available) {
+          setApodoError(true);
+          setErrorMsg(result.error || "El nombre de usuario ya está en uso o es inválido.");
+          triggerShake();
+          return;
+        }
+      } catch (err) {
+        setErrorMsg("Error al validar el nombre de usuario.");
+        triggerShake();
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: fullEmail,
         password,
@@ -275,12 +323,14 @@ export default function LoginPage() {
           </Link>
           <div className="space-y-2 text-center transition-all duration-300">
             <h2 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tighter">
-              {displayMode === "login" ? "Bienvenido" : "Regístrate"}
+              {displayMode === "login" ? "Bienvenido" : displayMode === "register" ? "Regístrate" : "Recuperar"}
             </h2>
             <p className="text-sm font-medium text-muted-foreground">
               {displayMode === "login"
                 ? "Inicia sesión para continuar en la nube"
-                : "Usa tus credenciales institucionales"}
+                : displayMode === "register"
+                ? "Usa tus credenciales institucionales"
+                : "Ingresa tu correo para restablecer tu contraseña"}
             </p>
           </div>
         </div>
@@ -375,6 +425,16 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange("forgot")}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+
                 <Button
                   type="submit"
                   disabled={isPending}
@@ -403,7 +463,7 @@ export default function LoginPage() {
                   </button>
                 </div>
               </form>
-            ) : (
+            ) : displayMode === "register" ? (
               /* ─── FORMULARIO REGISTRO ─── */
               <form onSubmit={handleRegister} className="space-y-4 w-full">
                 {/* Nombre Completo */}
@@ -539,6 +599,62 @@ export default function LoginPage() {
                     className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
                   >
                     ¿Ya tienes cuenta? <span className="text-foreground underline decoration-border underline-offset-4">Ingresa aquí</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* ─── FORMULARIO RECUPERAR CONTRASEÑA ─── */
+              <form onSubmit={handleForgot} className="space-y-4 w-full">
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <div className="relative flex items-center group">
+                    <div className="absolute left-4 text-muted-foreground/50 group-focus-within:text-foreground transition-colors">
+                      <Mail className="size-4.5" />
+                    </div>
+                    <Input
+                      id="forgot-email"
+                      type="text"
+                      placeholder="nombre.apellido"
+                      value={emailPrefix}
+                      onChange={(e) => {
+                        const val = e.target.value.toLowerCase().replace(/\s+/g, "").split("@")[0];
+                        setEmailPrefix(val);
+                        if (emailError) setEmailError(false);
+                      }}
+                      disabled={isPending}
+                      className={cn(
+                        "h-14 pl-12 pr-28 rounded-2xl text-base font-medium transition-all duration-200 bg-secondary/40 border-transparent hover:bg-secondary/60 focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-border",
+                        emailError && "border-destructive focus-visible:ring-destructive focus-visible:border-destructive"
+                      )}
+                    />
+                    <span className="absolute right-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 select-none pointer-events-none">
+                      @uta.edu.ec
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full h-14 rounded-full font-bold text-lg mt-8 bg-foreground text-background hover:bg-foreground/90 transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <span>Enviar enlace de recuperación</span>
+                  )}
+                </Button>
+
+                <div className="text-center pt-6">
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange("login")}
+                    className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2 mx-auto"
+                  >
+                    <ArrowLeft className="size-4" /> Volver al inicio de sesión
                   </button>
                 </div>
               </form>
