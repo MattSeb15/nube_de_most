@@ -245,97 +245,76 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Actividades Próximas ──────────────────── */}
-      <section className="relative w-full py-32 bg-background overflow-hidden">
-        {/* Giant background text for depth */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[12vw] font-black text-muted/30 whitespace-nowrap select-none pointer-events-none -z-10 tracking-tighter">
-          DEADLINES
+      {/* ── Comunidad / Usuarios Recientes ─────────── */}
+      <section className="relative w-full py-32 bg-background overflow-hidden border-t border-border/40">
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05]">
+          <div className="text-[18vw] font-black whitespace-nowrap select-none pointer-events-none tracking-tighter">
+            COMUNIDAD
+          </div>
         </div>
-
-        <div className="mx-auto w-full max-w-5xl px-6 relative z-10">
-          <ScrollReveal direction="up">
+        
+        <div className="mx-auto w-full max-w-6xl px-6 relative z-10">
+          <ScrollReveal>
             <div className="flex flex-col items-center text-center mb-20">
-              <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground uppercase">
-                No te quedes atrás
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground leading-[1.1]">
+                Nuevos en la Nube.
               </h2>
-              <p className="mt-6 text-2xl text-muted-foreground font-medium">
-                Próximas entregas y eventos importantes.
+              <p className="mt-6 text-xl md:text-2xl text-muted-foreground font-medium max-w-2xl">
+                Únete a los estudiantes que ya están compartiendo y colaborando.
               </p>
             </div>
           </ScrollReveal>
 
-          {pendingActividadesWithMaterias.length === 0 ? (
-            <EmptyState
-              icon={Calendar}
-              title="¡Todo al día!"
-              description="No hay actividades pendientes para mostrar en este momento. ¡Excelente trabajo!"
-              action={
-                <MouseTooltip text="Ver historial de actividades">
-                  <ScrollLink href="/actividades">
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      Ver Historial
-                    </Button>
-                  </ScrollLink>
+          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
+            {latestUsers.map((u, i) => (
+              <ScrollReveal key={u.id} delay={0.05 * i} direction="up">
+                <MouseTooltip text={u.apodo || u.nombre_completo || "Usuario"}>
+                  <Link href={`/perfil/${u.apodo || u.id}`} className="group flex flex-col items-center gap-3">
+                    <Avatar className="size-20 md:size-28 border-4 border-background shadow-xl ring-2 ring-primary/20 group-hover:ring-primary group-hover:scale-110 transition-all duration-500 group-hover:shadow-primary/30">
+                      {u.avatar_url && (
+                        <AvatarImage src={u.avatar_url} alt={u.nombre_completo} className="object-cover" />
+                      )}
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl md:text-3xl">
+                        {(u.nombre_completo || "U").substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm md:text-base font-bold text-muted-foreground group-hover:text-foreground transition-colors tracking-tight">
+                      @{u.apodo || u.nombre_completo.split(' ')[0]}
+                    </span>
+                  </Link>
                 </MouseTooltip>
-              }
-            />
-          ) : (
-            <div className="space-y-6">
-              {pendingActividadesWithMaterias.map((act, i) => {
-                const date = new Date(act.fechaEntrega);
-                const day = date.getDate();
-                const month = date.toLocaleString('es-EC', { month: 'short' }).replace('.', '').toUpperCase();
-                const time = formatFecha(act.fechaEntrega).split(', ')[1] || date.toLocaleTimeString('es-EC', {hour: '2-digit', minute: '2-digit'});
-                const materia = act.materia;
-                const status = statusConfig[act.estado as keyof typeof statusConfig];
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                return (
-                  <ScrollReveal key={act.id} delay={0.15 * i} className="flex flex-col sm:flex-row gap-4 sm:gap-8 group items-center">
-                    {/* Date Block */}
-                    <div className="flex sm:flex-col items-center justify-center shrink-0 w-full sm:w-28 h-16 sm:h-28 rounded-2xl sm:rounded-[2rem] bg-muted/50 border border-border/50 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all duration-300 shadow-sm">
-                      <span className="text-2xl sm:text-4xl font-black leading-none">{day}</span>
-                      <span className="text-xs sm:text-sm font-bold tracking-widest mt-1 opacity-80">{month}</span>
-                    </div>
+      {/* ── Actividades Próximas ──────────────────── */}
+      <section className="relative w-full py-32 bg-background overflow-hidden">
+        {/* Giant background text for depth */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10vw] font-black text-muted/30 whitespace-nowrap select-none pointer-events-none -z-10 tracking-tighter opacity-50">
+          PRÓXIMAMENTE
+        </div>
 
-                    {/* Content Card */}
-                    <Card className="flex-1 w-full border-border/50 hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
-                      <CardContent className="flex flex-col md:flex-row md:items-center justify-between p-6 sm:p-8 gap-6">
-                        <div className="flex flex-col gap-2">
-                          <span className="text-xl font-bold text-foreground">
-                            {act.nombre}
-                          </span>
-                          <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            {materia ? (
-                              <>
-                                <MateriaIcon name={materia.icono} className="size-4" style={{ fill: materia.color, color: materia.color }} />
-                                {materia.nombre}
-                              </>
-                            ) : "Materia desconocida"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground bg-muted px-3 py-1.5 rounded-lg">
-                            <Clock className="size-4" />
-                            {time}
-                          </div>
-                          <Badge variant="secondary" className={`${status.className} px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider`}>
-                            {status.label}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </ScrollReveal>
-                );
-              })}
+        <div className="mx-auto w-full max-w-5xl px-6 relative z-10">
+          <ScrollReveal direction="up">
+            <div className="flex flex-col items-center text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-primary/10 text-primary font-bold text-sm tracking-wide uppercase border border-primary/20">
+                <Shield className="size-4" /> Work in Progress
+              </div>
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground">
+                Calendario de Actividades
+              </h2>
+              <p className="mt-6 text-xl md:text-2xl text-muted-foreground font-medium max-w-2xl">
+                Un sistema inteligente para rastrear tus tareas, deberes y proyectos. Mantente al día con notificaciones, colabora con tus compañeros y nunca te pierdas una entrega.
+              </p>
             </div>
-          )}
+          </ScrollReveal>
 
-          <ScrollReveal delay={0.4} className="flex justify-center mt-16">
-            <ScrollLink href="/actividades">
-              <Button size="lg" className="rounded-full px-10 h-16 text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-foreground text-background hover:bg-foreground/90">
-                Abrir Calendario <ArrowRight className="ml-3 size-5" />
-              </Button>
-            </ScrollLink>
+          <ScrollReveal delay={0.2} className="flex justify-center">
+            <Button disabled size="lg" className="rounded-full px-10 h-16 text-lg font-bold shadow-lg opacity-50 cursor-not-allowed bg-muted text-muted-foreground border border-border">
+              Disponible Muy Pronto <Clock className="ml-3 size-5" />
+            </Button>
           </ScrollReveal>
         </div>
       </section>
