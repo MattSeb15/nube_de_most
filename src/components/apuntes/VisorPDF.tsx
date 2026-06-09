@@ -2,8 +2,14 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import type { ArchivoApunte } from "@/types";
-import { X, ExternalLink, Loader2, AlertCircle, Eye, ThumbsUp, ThumbsDown, FileText } from "lucide-react";
+import { X, ExternalLink, Loader2, AlertCircle, Eye, ThumbsUp, ThumbsDown, FileText, MoreVertical, Maximize } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Worker, Viewer, SpecialZoomLevel } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin, ToolbarProps, ToolbarSlot } from '@react-pdf-viewer/default-layout';
@@ -27,6 +33,7 @@ interface VisorPDFProps {
 export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDislike }: VisorPDFProps) {
   // Sync with global document dark mode
   const [isDark, setIsDark] = useState(false);
+  const [initialScale, setInitialScale] = useState<number | SpecialZoomLevel>(SpecialZoomLevel.PageWidth);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -34,6 +41,11 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
       setIsDark(document.documentElement.classList.contains('dark'));
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setInitialScale(1.5);
+    }
+    
     return () => observer.disconnect();
   }, []);
 
@@ -52,7 +64,7 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
           NumberOfPages,
         } = slots;
         return (
-          <div className="flex items-center gap-1 sm:gap-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md rounded-full shadow-2xl border border-neutral-200 dark:border-white/10 text-neutral-800 dark:text-white animate-slide-up">
+          <div className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 sm:px-5 sm:py-2.5 bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md rounded-full shadow-2xl border border-neutral-200 dark:border-white/10 text-neutral-800 dark:text-white animate-slide-up max-w-[95vw]">
             <button 
               onClick={() => scrollToPage(currentPage - 1)} 
               disabled={currentPage === 0} 
@@ -93,7 +105,7 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
 
             <ZoomOut>
               {(props) => (
-                <button onClick={props.onClick} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Reducir">
+                <button id="pdf-zoom-out-btn" onClick={props.onClick} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Reducir">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                 </button>
               )}
@@ -103,23 +115,49 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
             </div>
             <ZoomIn>
               {(props) => (
-                <button onClick={props.onClick} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Ampliar">
+                <button id="pdf-zoom-in-btn" onClick={props.onClick} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Ampliar">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                 </button>
               )}
             </ZoomIn>
-            <div className="w-px h-5 sm:h-6 bg-neutral-300 dark:bg-white/20 mx-1 sm:mx-2"></div>
+            <div className="hidden sm:block w-px h-5 sm:h-6 bg-neutral-300 dark:bg-white/20 mx-1 sm:mx-2"></div>
             <EnterFullScreen>
               {(props) => (
-                <button onClick={props.onClick} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Pantalla Completa">
+                <button onClick={props.onClick} className="hidden sm:block p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Pantalla Completa">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                 </button>
               )}
             </EnterFullScreen>
-            <div className="w-px h-5 sm:h-6 bg-neutral-300 dark:bg-white/20 mx-1 sm:mx-2"></div>
-            <button onClick={() => window.open(file.urlArchivo || (file as any).url_archivo, '_blank')} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Abrir en otra pestaña">
+            <div className="hidden sm:block w-px h-5 sm:h-6 bg-neutral-300 dark:bg-white/20 mx-1 sm:mx-2"></div>
+            <button onClick={() => window.open(file.urlArchivo || (file as any).url_archivo, '_blank')} className="hidden sm:block p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Abrir en otra pestaña">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </button>
+
+            {/* Mobile-only More options menu */}
+            <div className="sm:hidden flex items-center">
+              <div className="w-px h-5 bg-neutral-300 dark:bg-white/20 mx-1"></div>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger 
+                  render={<button className="p-1.5 hover:bg-neutral-200 dark:hover:bg-white/20 rounded-full transition-colors text-neutral-700 dark:text-white" title="Más opciones" />}
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="mb-2 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl border-neutral-200 dark:border-white/10 p-2 shadow-xl" sideOffset={12}>
+                  <EnterFullScreen>
+                    {(props) => (
+                      <DropdownMenuItem onClick={props.onClick} className="rounded-xl cursor-pointer text-sm font-medium py-2.5 px-3">
+                        <Maximize className="w-4 h-4 mr-3 opacity-70" />
+                        Pantalla Completa
+                      </DropdownMenuItem>
+                    )}
+                  </EnterFullScreen>
+                  <DropdownMenuItem onClick={() => window.open(file.urlArchivo || (file as any).url_archivo, '_blank')} className="rounded-xl cursor-pointer text-sm font-medium py-2.5 px-3">
+                    <ExternalLink className="w-4 h-4 mr-3 opacity-70" />
+                    Nueva pestaña
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         );
       }}
@@ -216,6 +254,49 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
     renderToolbar,
   });
 
+  const pinchRef = useRef<{ initialDist: number, lastPinchTime: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchRef.current = { initialDist: dist, lastPinchTime: Date.now() };
+    } else {
+      pinchRef.current = null;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const now = Date.now();
+      // Throttle to avoid freezing the UI with too many re-renders
+      if (now - pinchRef.current.lastPinchTime < 100) return;
+
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      
+      const diff = dist - pinchRef.current.initialDist;
+      const PINCH_THRESHOLD = 45; // Pixels distance to trigger one zoom level
+      
+      if (Math.abs(diff) > PINCH_THRESHOLD) {
+        if (diff > 0) {
+          document.getElementById('pdf-zoom-in-btn')?.click();
+        } else {
+          document.getElementById('pdf-zoom-out-btn')?.click();
+        }
+        pinchRef.current = { initialDist: dist, lastPinchTime: now };
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    pinchRef.current = null;
+  };
+
   const [error, setError] = useState<string | null>(null);
 
   const rawUrl = file.urlArchivo || (file as any).url_archivo;
@@ -235,10 +316,26 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
     const fetchPdf = async () => {
       try {
         const proxiedUrl = `/api/proxy-pdf?url=${encodeURIComponent(rawUrl)}`;
-        const res = await fetch(proxiedUrl);
-        if (!res.ok) throw new Error("Error al descargar el PDF desde el servidor.");
-        
-        const blob = await res.blob();
+        let blob: Blob;
+
+        try {
+          const cache = await caches.open('apuntes-pdf-cache');
+          const cachedResponse = await cache.match(proxiedUrl);
+          if (cachedResponse) {
+            blob = await cachedResponse.blob();
+          } else {
+            const res = await fetch(proxiedUrl);
+            if (!res.ok) throw new Error("Error al descargar el PDF desde el servidor.");
+            cache.put(proxiedUrl, res.clone());
+            blob = await res.blob();
+          }
+        } catch (cacheErr) {
+          console.warn("Cache API fallback for PDF:", cacheErr);
+          const res = await fetch(proxiedUrl);
+          if (!res.ok) throw new Error("Error al descargar el PDF desde el servidor.");
+          blob = await res.blob();
+        }
+
         if (!active) return;
         
         const objectUrl = URL.createObjectURL(blob);
@@ -287,6 +384,7 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
         overflow: visible !important;
         height: auto !important;
       }
+      /* Disabled overrides for native 2D scrolling (re-enabled for inline layout) */
       .rpv-default-layout__toolbar {
         position: fixed !important;
         top: auto !important;
@@ -425,15 +523,19 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
 
   return (
     <>
-      <div className="w-full bg-[#eee] dark:bg-[#1a1a1a]">
+      <div className="w-full min-h-screen bg-[#eee] dark:bg-[#1a1a1a]">
         {/* Viewer Body */}
         <div 
-          className="relative"
+          className="relative min-w-max"
           onWheelCapture={(e) => {
             if (e.ctrlKey || e.metaKey) {
               e.stopPropagation();
             }
           }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
         >
           {error ? (
             <div className="flex flex-col items-center justify-center h-[400px] text-red-500 p-6 text-center">
@@ -465,7 +567,7 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
                 fileUrl={blobUrl}
                 plugins={[defaultLayoutPluginInstance]}
                 theme={isDark ? "dark" : "light"}
-                defaultScale={1.7}
+                defaultScale={initialScale}
                 onPageChange={handlePageChange}
               />
             </Worker>
