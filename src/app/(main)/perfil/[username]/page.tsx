@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPerfilByUsername, getArchivosByCreador, getMateriaById } from "@/lib/academic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MateriaCard } from "@/components/apuntes/MateriaCard";
 import { ArrowLeft, Clock, ChevronRight, Shield, Globe, FileArchive, Users, Edit, Bookmark } from "lucide-react";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -99,6 +100,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const colaboraciones = archivosWithMaterias.filter(a => a.esColaboracion);
 
   let archivosGuardados: any[] = [];
+  let materiasGuardadas: any[] = [];
   if (isOwner) {
     const { data: guardadosData } = await supabase
       .from("apuntes_guardados")
@@ -127,6 +129,21 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           };
         })
       );
+    }
+
+    const { data: mGuardadosData } = await supabase
+      .from("materias_guardadas")
+      .select("materia_id")
+      .eq("usuario_id", user.id);
+
+    if (mGuardadosData) {
+      materiasGuardadas = await Promise.all(
+        mGuardadosData.map(async (m: any) => {
+          const materia = await getMateriaById(m.materia_id);
+          return materia;
+        })
+      );
+      materiasGuardadas = materiasGuardadas.filter(Boolean);
     }
   }
 
@@ -263,7 +280,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 return (
                   <Link 
                     key={archivo.id}
-                    href={`/apuntes/nivelacion/${materiaSlug}?archivo=${archivo.id}`}
+                    href={`/apuntes/documento/${archivo.id}`}
                     className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -314,7 +331,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 return (
                   <Link 
                     key={archivo.id}
-                    href={`/apuntes/nivelacion/${materiaSlug}?archivo=${archivo.id}`}
+                    href={`/apuntes/documento/${archivo.id}`}
                     className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -365,7 +382,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                 return (
                   <Link 
                     key={archivo.id}
-                    href={`/apuntes/nivelacion/${materiaSlug}?archivo=${archivo.id}`}
+                    href={`/apuntes/documento/${archivo.id}`}
                     className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -398,7 +415,30 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           </section>
         )}
 
-        {aportesPropios.length === 0 && colaboraciones.length === 0 && (!isOwner || archivosGuardados.length === 0) && (
+        {/* Materias Guardadas */}
+        {isOwner && materiasGuardadas.length > 0 && (
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <Bookmark className="size-5 text-foreground" />
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                Materias Guardadas
+              </h2>
+            </div>
+            
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {materiasGuardadas.map((materia, i) => (
+                <MateriaCard
+                  key={materia.id}
+                  materia={materia}
+                  href={`/apuntes/${materia.semestreSlug || 'otros'}/${materia.slug}`}
+                  index={i}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {aportesPropios.length === 0 && colaboraciones.length === 0 && (!isOwner || (archivosGuardados.length === 0 && materiasGuardadas.length === 0)) && (
           <div className="py-12 border-t border-border/40 w-full flex flex-col items-center justify-center opacity-60">
              <FileArchive className="size-10 text-muted-foreground mb-4" />
              <p className="text-sm font-medium text-muted-foreground">Este usuario aún no tiene aportes en la nube.</p>
