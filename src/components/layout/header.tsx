@@ -266,10 +266,10 @@ export function Header() {
             </Button>
           </Link>
 
-          <Separator orientation="vertical" className="h-6 mx-1 md:hidden" />
+          <div className="w-[1px] h-8 bg-border/60 mx-1 md:hidden" />
 
           {user ? (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger
                 render={
                   <button
@@ -322,11 +322,11 @@ export function Header() {
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-1 sm:gap-2 px-1">
-              <Link href="/login" className="hidden sm:block text-sm font-semibold hover:text-primary px-2 sm:px-3 py-2 transition-colors" onClick={() => window.scrollTo(0, 0)}>
+              <Link href="/login" className="text-xs sm:text-sm font-semibold hover:text-primary px-1 sm:px-3 py-2 transition-colors" onClick={() => window.scrollTo(0, 0)}>
                 Ingresar
               </Link>
               <Link href="/login?mode=register" onClick={() => window.scrollTo(0, 0)}>
-                <Button className="rounded-full h-8 sm:h-10 px-4 sm:px-6 text-xs sm:text-sm font-bold bg-foreground text-background hover:bg-foreground/90">
+                <Button className="rounded-full h-8 sm:h-10 px-3 sm:px-6 text-xs sm:text-sm font-bold bg-foreground text-background hover:bg-foreground/90">
                   Registrarse
                 </Button>
               </Link>
@@ -344,7 +344,7 @@ export function Header() {
                 </Button>
               }
             />
-            <SheetContent side="right" className="w-72 p-0">
+            <SheetContent side="right" className="!w-full sm:!w-96 p-0">
               <SheetHeader className="px-6 pt-6 pb-2">
                 <SheetTitle>
                   <Link href="/" className="flex items-center gap-2" onClick={() => { setMobileOpen(false); window.scrollTo(0, 0); }}>
