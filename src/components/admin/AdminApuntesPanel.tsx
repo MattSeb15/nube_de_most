@@ -6,6 +6,7 @@ import { Explorador } from "@/components/apuntes/Explorador";
 import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
 import { DialogoMover } from "@/components/apuntes/DialogoMover";
+import { MultiPdfUploadModal } from "@/components/apuntes/MultiPdfUploadModal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -52,6 +53,8 @@ export function AdminApuntesPanel() {
   const [renameValue, setRenameValue] = useState("");
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false);
+  const [selectedPdfFiles, setSelectedPdfFiles] = useState<File[]>([]);
 
   // Materias
   const [materias, setMaterias] = useState<any[]>([]);
@@ -307,9 +310,14 @@ export function AdminApuntesPanel() {
                   <input
                     type="file"
                     accept="application/pdf"
+                    multiple
                     className="hidden"
                     onChange={(e) => {
-                      if (e.target.files?.[0]) uploadFileToFirebase(e.target.files[0], "pdf");
+                      if (e.target.files && e.target.files.length > 0) {
+                        setSelectedPdfFiles(Array.from(e.target.files));
+                        setIsPdfUploadModalOpen(true);
+                      }
+                      e.target.value = "";
                     }}
                   />
                 </label>
@@ -533,6 +541,63 @@ export function AdminApuntesPanel() {
           }
           setItemToMove(null);
           fetchContents();
+        }}
+      />
+
+      <MultiPdfUploadModal
+        isOpen={isPdfUploadModalOpen}
+        files={selectedPdfFiles}
+        onClose={() => {
+          setIsPdfUploadModalOpen(false);
+          setSelectedPdfFiles([]);
+        }}
+        onUpload={async (optimizedFiles) => {
+          if (!currentFolder) return;
+          setIsUploadingFile(true);
+          setUploadProgress(0);
+          
+          let completed = 0;
+          
+          const uploadPromises = optimizedFiles.map((file) => {
+            return new Promise<void>((resolve, reject) => {
+              const storageRef = ref(storage, `apuntes/${currentFolder.id}/${uuidv4()}_${file.name}`);
+              const uploadTask = uploadBytesResumable(storageRef, file);
+
+              uploadTask.on(
+                "state_changed",
+                (snapshot) => {},
+                (error) => {
+                  console.error(error);
+                  reject(error);
+                },
+                async () => {
+                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                  await supabase.from("archivos_apuntes").insert({
+                    carpeta_id: currentFolder.id,
+                    tipo: "pdf",
+                    nombre: file.name,
+                    url_archivo: downloadURL,
+                    creador_id: currentUser?.id,
+                  });
+                  completed++;
+                  setUploadProgress((completed / optimizedFiles.length) * 100);
+                  resolve();
+                }
+              );
+            });
+          });
+
+          try {
+            await Promise.all(uploadPromises);
+          } catch (e) {
+            console.error(e);
+          } finally {
+            setIsUploadingFile(false);
+            setUploadProgress(0);
+            setIsPdfUploadModalOpen(false);
+            setSelectedPdfFiles([]);
+            fetchContents();
+          }
         }}
       />
     </div>
