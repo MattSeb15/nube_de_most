@@ -32,10 +32,8 @@ export function ImageOptimizerModal({
   const [optimizedBlob, setOptimizedBlob] = useState<Blob | null>(null);
   
   // Quality configuration
-  const [quality, setQuality] = useState<number>(85); // Default to max allowed
-  const [debouncedQuality, setDebouncedQuality] = useState<number>(85);
-  const minQuality = 40;
-  const maxQuality = 85;
+  const [quality] = useState<number>(5); 
+  const [debouncedQuality, setDebouncedQuality] = useState<number>(5);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuality(quality), 300);
@@ -356,29 +354,6 @@ export function ImageOptimizerModal({
               </div>
             </div>
 
-            {/* Quality Slider */}
-            <div className="bg-white dark:bg-neutral-950 p-5 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
-              <div className="flex justify-between items-end mb-4">
-                <div className="flex flex-col">
-                  <label className="text-sm font-semibold text-neutral-900 dark:text-white">Calidad WebP</label>
-                  <span className="text-xs text-neutral-500 mt-1">Límite estricto (40% - 85%)</span>
-                </div>
-                <span className="text-lg font-bold text-purple-600 dark:text-purple-400">{quality}%</span>
-              </div>
-              
-              <input 
-                type="range" 
-                min={minQuality} 
-                max={maxQuality} 
-                value={quality} 
-                onChange={(e) => setQuality(Number(e.target.value))}
-                className="w-full accent-purple-600 h-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="flex justify-between mt-2 text-xs text-neutral-400 font-medium">
-                <span>Mayor compresión</span>
-                <span>Mejor calidad</span>
-              </div>
-            </div>
 
             {/* Note */}
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">

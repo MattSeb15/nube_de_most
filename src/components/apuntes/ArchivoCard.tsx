@@ -46,7 +46,7 @@ export function ArchivoCard({ archivo }: ArchivoCardProps) {
           <div className="flex-1 min-w-0">
             <MouseTooltip text={`Ver apunte: ${archivo.nombre}`}>
               <Link 
-                href={`/apuntes/nivelacion/${materiaSlug}?archivo=${archivo.id}`}
+                href={`/apuntes/documento/${archivo.id}`}
                 className="focus-visible:outline-none"
               >
                 <CardTitle className="text-sm sm:text-base font-semibold leading-tight line-clamp-2 break-all group-hover:text-primary transition-colors min-h-[2.5em]">

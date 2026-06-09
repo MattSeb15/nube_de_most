@@ -6,12 +6,14 @@ import { Explorador } from "@/components/apuntes/Explorador";
 import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
 import { DialogoMover } from "@/components/apuntes/DialogoMover";
+import { MultiPdfUploadModal } from "@/components/apuntes/MultiPdfUploadModal";
 import { Loader2, RefreshCw, Plus, UploadCloud, BookOpen, ChevronRight, Search, Share, FileText } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TrackVisit } from "@/components/ui/TrackVisit";
 import { MateriaIcon } from "@/components/ui/materia-icon";
+import { CacheUtils } from "@/lib/cache";
 import type { CarpetaApunte, ArchivoApunte } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { uploadBytesResumable, ref, getDownloadURL } from "firebase/storage";
@@ -50,7 +52,7 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   // Redirect if initialFileId is provided
   useEffect(() => {
     if (initialFileId) {
-      router.push(`/apuntes/documento/${initialFileId}`);
+      router.replace(`/apuntes/documento/${initialFileId}`);
     }
   }, [initialFileId, router]);
   
@@ -59,6 +61,8 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isCreatingNotebook, setIsCreatingNotebook] = useState(false);
   const [newNotebookName, setNewNotebookName] = useState("");
+  const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false);
+  const [selectedPdfFiles, setSelectedPdfFiles] = useState<File[]>([]);
 
   const [deleteConfirmData, setDeleteConfirmData] = useState<{type: 'folder' | 'file', item: any} | null>(null);
   const [collaboratorsDialogData, setCollaboratorsDialogData] = useState<{file: any, collaborators: any[]} | null>(null);
@@ -105,9 +109,20 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   }, [currentFolder, materia.id]);
 
   const fetchContents = async () => {
-    setLoading(true);
+    const folderCacheKey = `folders_${materia.id}`;
+    const cachedFolders = CacheUtils.get<any[]>(folderCacheKey);
+    
+    if (cachedFolders) {
+      processFolders(cachedFolders);
+      setLoading(false);
+      fetchFoldersFromSupabase(folderCacheKey, true, cachedFolders);
+    } else {
+      setLoading(true);
+      await fetchFoldersFromSupabase(folderCacheKey, false, null);
+    }
+  };
 
-    // Fetch all folders for the materia to compute recursive file counts
+  const fetchFoldersFromSupabase = async (cacheKey: string, isBackground: boolean, cachedData: any[] | null) => {
     const { data: allFoldersData } = await supabase
       .from("carpetas_apuntes")
       .select("*, perfiles!creador_id(nombre_completo, rol, avatar_url, apodo), archivos_apuntes(id, tipo, creador_id, perfiles!creador_id(id, nombre_completo, avatar_url, apodo), paginas_cuaderno(creador_id, url_imagen, perfiles!creador_id(id, nombre_completo, avatar_url, apodo)))")
@@ -116,6 +131,19 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
       .order("nombre");
 
     const allFolders = allFoldersData || [];
+    const isDataChanged = !cachedData || JSON.stringify(cachedData) !== JSON.stringify(allFolders);
+
+    if (isDataChanged) {
+      CacheUtils.set(cacheKey, allFolders);
+      await processFolders(allFolders);
+    }
+    
+    if (!isBackground) {
+      setLoading(false);
+    }
+  };
+
+  const processFolders = async (allFolders: any[]) => {
     allFoldersRef.current = allFolders;
 
     let effectiveFolder = currentFolder;
@@ -178,17 +206,44 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
     setFolders(childFolders);
 
     if (parentId) {
+      const filesCacheKey = `files_${parentId}`;
+      const cachedFiles = CacheUtils.get<any[]>(filesCacheKey);
+      
+      if (cachedFiles) {
+         setFiles(cachedFiles);
+         fetchFilesInBackground(parentId, filesCacheKey, cachedFiles);
+      } else {
+         await fetchFiles(parentId, filesCacheKey, null);
+      }
+    } else {
+      setFiles([]);
+    }
+  };
+
+  const fetchFilesInBackground = async (parentId: string, cacheKey: string, cachedData: any[]) => {
       const { data: fileData } = await supabase
         .from("archivos_apuntes")
         .select("*, perfiles!creador_id(nombre_completo, rol, avatar_url, apodo), paginas_cuaderno(creador_id, url_imagen, perfiles!creador_id(id, nombre_completo, avatar_url, apodo)), interacciones_apuntes(tipo)")
         .eq("carpeta_id", parentId)
         .order("nombre");
-      setFiles(fileData || []);
-    } else {
-      setFiles([]);
-    }
+      
+      const filesArr = fileData || [];
+      if (JSON.stringify(cachedData) !== JSON.stringify(filesArr)) {
+         setFiles(filesArr);
+         CacheUtils.set(cacheKey, filesArr);
+      }
+  };
 
-    setLoading(false);
+  const fetchFiles = async (parentId: string, cacheKey: string, cachedData: any[] | null) => {
+      const { data: fileData } = await supabase
+        .from("archivos_apuntes")
+        .select("*, perfiles!creador_id(nombre_completo, rol, avatar_url, apodo), paginas_cuaderno(creador_id, url_imagen, perfiles!creador_id(id, nombre_completo, avatar_url, apodo)), interacciones_apuntes(tipo)")
+        .eq("carpeta_id", parentId)
+        .order("nombre");
+      
+      const filesArr = fileData || [];
+      setFiles(filesArr);
+      CacheUtils.set(cacheKey, filesArr);
   };
 
   const updateUrlFolder = (folderId: string | null) => {
@@ -304,19 +359,36 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   return (
     <div className="w-full">
       {/* Header Estilo Imagen 1 */}
-      <section className="mb-10 animate-fade-in bg-gradient-to-b from-[#e5ffd4]/30 to-transparent dark:from-[#e5ffd4]/5 rounded-3xl p-6 md:p-8 -mx-4 md:mx-0">
-        <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between">
+      <section 
+        className="mb-10 animate-fade-in rounded-3xl p-6 md:p-8 -mx-4 md:mx-0 relative overflow-hidden"
+        style={{ backgroundColor: materia.color || '#39b54a' }}
+      >
+        <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between relative z-10">
           <div className="flex gap-4 items-start">
-            <div className="flex h-16 w-16 md:h-20 md:w-20 shrink-0 items-center justify-center rounded-2xl bg-[#39b54a] shadow-lg shadow-[#39b54a]/20">
-              <MateriaIcon name={materia.icono} className="size-8 md:size-10 text-white fill-white" style={{ fill: 'white' }} />
+            <div className="flex h-16 w-16 md:h-20 md:w-20 shrink-0 items-center justify-center">
+              <MateriaIcon name={materia.icono} className="size-12 md:size-14 text-white fill-white" style={{ fill: 'white' }} />
             </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-                {materia.nombre} <span className="text-muted-foreground/60 font-medium">({totalStats.pdfs + totalStats.cuadernos})</span>
+            <div className="min-w-0 flex-1 text-white">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight flex flex-wrap items-center gap-x-2 gap-y-1 break-words">
+                {materia.nombre} 
+                {loading ? (
+                  <div className="h-8 w-16 bg-white/20 animate-pulse rounded-md ml-2 shrink-0" />
+                ) : (
+                  <span className="text-white/70 font-medium shrink-0 text-xl sm:text-2xl md:text-3xl">({totalStats.pdfs + totalStats.cuadernos})</span>
+                )}
               </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-medium text-muted-foreground">
-                <span className="flex items-center gap-1.5 text-foreground"><FileText className="size-4" /> {totalStats.pdfs} documentos</span>
-                <span className="flex items-center gap-1.5 text-foreground"><BookOpen className="size-4" /> {totalStats.cuadernos} cuadernos</span>
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-medium text-white/90">
+                {loading ? (
+                  <>
+                    <div className="h-5 w-32 bg-white/20 animate-pulse rounded" />
+                    <div className="h-5 w-32 bg-white/20 animate-pulse rounded" />
+                  </>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1.5"><FileText className="size-4 shrink-0" /> {totalStats.pdfs} documentos</span>
+                    <span className="flex items-center gap-1.5"><BookOpen className="size-4 shrink-0" /> {totalStats.cuadernos} cuadernos</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -362,9 +434,15 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
                   <input
                     type="file"
                     accept="application/pdf"
+                    multiple
                     className="hidden"
                     onChange={(e) => {
-                      if (e.target.files?.[0]) uploadFileToFirebase(e.target.files[0], "pdf");
+                      if (e.target.files && e.target.files.length > 0) {
+                        setSelectedPdfFiles(Array.from(e.target.files));
+                        setIsPdfUploadModalOpen(true);
+                      }
+                      // reset input so the same files can be selected again if cancelled
+                      e.target.value = "";
                     }}
                   />
                 </label>
@@ -572,6 +650,63 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
           </div>
         </DialogContent>
       </Dialog>
+
+      <MultiPdfUploadModal
+        isOpen={isPdfUploadModalOpen}
+        files={selectedPdfFiles}
+        onClose={() => {
+          setIsPdfUploadModalOpen(false);
+          setSelectedPdfFiles([]);
+        }}
+        onUpload={async (optimizedFiles) => {
+          if (!currentFolder) return;
+          setIsUploadingFile(true);
+          setUploadProgress(0);
+          
+          let completed = 0;
+          
+          const uploadPromises = optimizedFiles.map((file) => {
+            return new Promise<void>((resolve, reject) => {
+              const storageRef = ref(storage, `apuntes/${currentFolder.id}/${uuidv4()}_${file.name}`);
+              const uploadTask = uploadBytesResumable(storageRef, file);
+
+              uploadTask.on(
+                "state_changed",
+                (snapshot) => {},
+                (error) => {
+                  console.error(error);
+                  reject(error);
+                },
+                async () => {
+                  const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                  await supabase.from("archivos_apuntes").insert({
+                    carpeta_id: currentFolder.id,
+                    tipo: "pdf",
+                    nombre: file.name,
+                    url_archivo: downloadURL,
+                    creador_id: currentUser?.id,
+                  });
+                  completed++;
+                  setUploadProgress((completed / optimizedFiles.length) * 100);
+                  resolve();
+                }
+              );
+            });
+          });
+
+          try {
+            await Promise.all(uploadPromises);
+          } catch (e) {
+            console.error(e);
+          } finally {
+            setIsUploadingFile(false);
+            setUploadProgress(0);
+            setIsPdfUploadModalOpen(false);
+            setSelectedPdfFiles([]);
+            fetchContents();
+          }
+        }}
+      />
     </div>
   );
 }

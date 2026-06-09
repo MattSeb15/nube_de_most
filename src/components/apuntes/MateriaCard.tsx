@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { User, Eye } from "lucide-react";
 import { Materia } from "@/types";
+import { MateriaInteractions } from "./MateriaInteractions";
 
 interface MateriaCardProps {
   materia: Materia;
@@ -111,6 +112,7 @@ export function MateriaCard({ materia, href, index = 0 }: MateriaCardProps) {
               </Badge>
             )}
           </div>
+          <MateriaInteractions materiaId={materia.id} />
         </CardContent>
       </Card>
       </Link>
