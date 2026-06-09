@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import DocumentViewClient from "./DocumentViewClient";
+import { TrackVisit } from "@/components/ui/TrackVisit";
 
 export default async function DocumentoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,13 +70,16 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <DocumentViewClient 
-      file={file} 
-      currentUser={currentUser} 
-      initialLikes={likes}
-      initialDislikes={dislikes}
-      initialInteraction={currentInteraction}
-      initialIsSaved={isSaved}
-    />
+    <>
+      <TrackVisit entidadId={file.id} tipoEntidad="apunte" />
+      <DocumentViewClient 
+        file={file} 
+        currentUser={currentUser} 
+        initialLikes={likes}
+        initialDislikes={dislikes}
+        initialInteraction={currentInteraction}
+        initialIsSaved={isSaved}
+      />
+    </>
   );
 }
