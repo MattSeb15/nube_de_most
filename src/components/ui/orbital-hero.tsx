@@ -237,8 +237,8 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
       <div 
         className="absolute inset-0 z-10 pointer-events-none bg-background"
         style={{
-          maskImage: 'radial-gradient(ellipse 900px 700px at center, black 20%, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 900px 700px at center, black 20%, transparent 80%)'
+          maskImage: 'radial-gradient(ellipse min(900px, 140vw) min(700px, 140vh) at center, black 20%, transparent 80%)',
+          WebkitMaskImage: 'radial-gradient(ellipse min(900px, 140vw) min(700px, 140vh) at center, black 20%, transparent 80%)'
         }}
       />
       {/* Foreground Content */}

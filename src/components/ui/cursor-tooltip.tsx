@@ -15,6 +15,12 @@ export function CursorTooltipProvider({ children }: { children: React.ReactNode 
   const cursorYSpring = useSpring(cursorY, springConfig);
 
   useEffect(() => {
+    // Check if the device supports hover and has a fine pointer (like a mouse)
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const isHoverableDevice = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      if (!isHoverableDevice) return;
+    }
+
     const handleMouseMove = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };
       cursorX.set(e.clientX);
@@ -84,7 +90,7 @@ export function CursorTooltipProvider({ children }: { children: React.ReactNode 
               pointerEvents: "none",
               zIndex: 99999,
             }}
-            className="ml-4 mt-4" // offset from the actual cursor
+            className="ml-4 mt-4 hidden md:block" // offset from the actual cursor, hidden on mobile
           >
             <div 
               className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-xl backdrop-blur-sm border ${!currentColor ? 'bg-primary/95 text-primary-foreground border-primary-foreground/20' : ''}`}
