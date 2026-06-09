@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
-import { Download, ThumbsUp, ThumbsDown, Bookmark, Share, MoreHorizontal, FileText, Users } from "lucide-react";
+import { Download, ThumbsUp, ThumbsDown, Bookmark, Share, MoreHorizontal, FileText, Users, ArrowLeft, Eye } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,11 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toggleLikeDislike, toggleSave } from "../../acciones";
-
+import { DownloadCuadernoModal } from "@/components/apuntes/DownloadCuadernoModal";
+import { createClient } from "@/utils/supabase/client";
+import { jsPDF } from "jspdf";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 export default function DocumentViewClient({ 
   file, 
   currentUser,
@@ -37,7 +41,8 @@ export default function DocumentViewClient({
   const [isPending, setIsPending] = useState(false);
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [showCollabs, setShowCollabs] = useState(false);
-  
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const supabase = createClient();  
   const handleLike = async () => {
     if (!currentUser) return;
     if (isPending) return;
@@ -140,7 +145,18 @@ export default function DocumentViewClient({
   const likeBtnGhost = isSpecialBg ? "hover:bg-white/20 text-white" : "text-green-600 hover:text-green-700 hover:bg-green-50/50";
   const dislikeBtnGhost = isSpecialBg ? "hover:bg-white/20 text-white" : "text-red-600 hover:text-red-700 hover:bg-red-50/50";
   const likeDivider = isSpecialBg ? "bg-white/20" : "bg-border";
+  
+  const savedBtnClass = isSaved 
+    ? (isPdf ? "bg-red-500 hover:bg-red-400 text-white shadow-md border border-red-400/50" : 
+       isCuaderno ? "bg-purple-500 hover:bg-purple-400 text-white shadow-md border border-purple-400/50" : 
+       "bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-900/40 dark:hover:bg-purple-900/60 dark:text-purple-300 shadow-sm")
+    : btnGhost;
   const handleDownload = async () => {
+    if (isCuaderno) {
+      setShowDownloadModal(true);
+      return;
+    }
+
     const url = file.urlArchivo || file.url_archivo;
     if (!url) return;
 
@@ -169,6 +185,149 @@ export default function DocumentViewClient({
     }
   };
 
+  const getCuadernoPages = async () => {
+    const { data, error } = await supabase
+      .from("paginas_cuaderno")
+      .select("url_imagen, orden")
+      .eq("cuaderno_id", file.id)
+      .order("orden", { ascending: true });
+    
+    if (error) {
+      console.error("Error fetching pages:", error);
+      return [];
+    }
+    return data || [];
+  };
+
+  const fetchImageAsBlob = async (url: string) => {
+    try {
+      // Intentar a través de nuestro proxy para evadir CORS si es necesario, 
+      // o directamente si el proxy también funciona para imágenes.
+      const proxiedUrl = `/api/proxy-pdf?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxiedUrl);
+      if (!response.ok) throw new Error("Network response was not ok");
+      return await response.blob();
+    } catch (error) {
+      // Fallback a fetch directo
+      const response = await fetch(url);
+      return await response.blob();
+    }
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const getImageDimensions = (base64: string): Promise<{ width: number, height: number }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.width, height: img.height });
+      img.onerror = reject;
+      img.src = base64;
+    });
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      const pages = await getCuadernoPages();
+      if (pages.length === 0) {
+        alert("El cuaderno no tiene páginas para descargar.");
+        return;
+      }
+
+      const pdf = new jsPDF();
+      
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const url = page.url_imagen;
+        
+        try {
+          const blob = await fetchImageAsBlob(url);
+          const base64 = await blobToBase64(blob);
+          const dims = await getImageDimensions(base64);
+
+          // Ajustar tamaño de la página del PDF según la imagen (formato A4 aprox o mantener ratio)
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (dims.height * pdfWidth) / dims.width;
+
+          if (i > 0) {
+            pdf.addPage([pdfWidth, pdfHeight]);
+            pdf.setPage(i + 1);
+          } else {
+             // Redimensionar la primera página
+             // Hacky way in jsPDF to set the first page size if needed, but we can just use standard A4
+             // For better results, we keep A4 and scale image to fit A4
+          }
+
+          const a4Width = 210;
+          const a4Height = 297;
+          
+          const ratio = Math.min(a4Width / dims.width, a4Height / dims.height);
+          const imgWidth = dims.width * ratio;
+          const imgHeight = dims.height * ratio;
+          
+          const marginX = (a4Width - imgWidth) / 2;
+          const marginY = (a4Height - imgHeight) / 2;
+
+          // Aseguramos formato 'JPEG' o 'PNG' basado en los datos
+          const isPng = base64.startsWith("data:image/png");
+          
+          pdf.addImage(base64, isPng ? "PNG" : "JPEG", marginX, marginY, imgWidth, imgHeight);
+        } catch (error) {
+          console.error(`Error procesando página ${i + 1}:`, error);
+        }
+      }
+
+      pdf.save(`${file.nombre}.pdf`);
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      alert("Hubo un error al generar el PDF.");
+    }
+  };
+
+  const handleDownloadZip = async () => {
+    try {
+      const pages = await getCuadernoPages();
+      if (pages.length === 0) {
+        alert("El cuaderno no tiene páginas para descargar.");
+        return;
+      }
+
+      const zip = new JSZip();
+      const folder = zip.folder(file.nombre);
+
+      if (!folder) throw new Error("No se pudo crear la carpeta ZIP");
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const url = page.url_imagen;
+        
+        try {
+          const blob = await fetchImageAsBlob(url);
+          // Determinar extensión, asumiendo jpg si no es evidente
+          let ext = "jpg";
+          if (blob.type === "image/png") ext = "png";
+          else if (blob.type === "image/webp") ext = "webp";
+          
+          folder.file(`pagina_${i + 1}.${ext}`, blob);
+        } catch (error) {
+          console.error(`Error descargando página ${i + 1}:`, error);
+        }
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `${file.nombre}.zip`);
+    } catch (error) {
+      console.error("Error al generar ZIP:", error);
+      alert("Hubo un error al generar el ZIP.");
+    }
+  };
+
   return (
     <main className="bg-background min-h-screen">
       {/* Floating Mini Header */}
@@ -178,8 +337,11 @@ export default function DocumentViewClient({
           isScrolled ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
         )}
       >
-        <div className={cn("backdrop-blur-md border shadow-md rounded-2xl p-2 sm:p-3 flex items-center justify-between gap-4 pointer-events-auto", floatingBg)}>
-          <div className="flex-1 min-w-0 flex items-center gap-3">
+        <div className={cn("backdrop-blur-md border shadow-md rounded-2xl p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-4 pointer-events-auto", floatingBg)}>
+          <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
+            <Button onClick={() => router.back()} variant="ghost" size="icon" className={cn("shrink-0 rounded-full h-8 w-8 sm:h-9 sm:w-9", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
             <div className={cn("hidden sm:flex h-8 w-8 rounded-full items-center justify-center shrink-0", iconBg)}>
                <FileText className="w-4 h-4" />
             </div>
@@ -201,27 +363,36 @@ export default function DocumentViewClient({
                   <span className="truncate">{file.perfiles?.nombre_completo || "Usuario anónimo"}</span>
                 </Link>
                 <span className="hidden sm:inline">•</span>
-                <span className="font-medium capitalize truncate">
+                <span className="font-medium capitalize truncate hidden sm:inline">
                   {dateStr ? format(new Date(dateStr), "d MMM yyyy, HH:mm", { locale: es }) : "2024"}
+                </span>
+                <span className="font-medium capitalize truncate sm:hidden">
+                  {dateStr ? format(new Date(dateStr), "d MMM, HH:mm", { locale: es }) : "2024"}
+                </span>
+                <span className="hidden sm:inline">•</span>
+                <span className="flex items-center gap-1 font-medium" title={`${file.vistas || 0} vistas`}>
+                  <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <span>{file.vistas || 0}</span>
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className={cn("hidden sm:flex items-center rounded-full mr-1 h-8", likeBtnBg)}>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Ocultamos los botones de like/dislike solo en pantallas ultra pequeñas (< 350px) usando max-[350px]:hidden */}
+            <div className={cn("flex max-[350px]:hidden items-center rounded-full sm:mr-1 h-8", likeBtnBg)}>
               <Button onClick={handleLike} variant="ghost" size="sm" className={cn("rounded-l-full px-2 h-full transition-colors", interaction === 'like' ? (isPdf ? "bg-white/30 text-white" : "bg-green-100 text-green-700") : likeBtnGhost)}>
-                <ThumbsUp className={cn("w-3.5 h-3.5", interaction === 'like' && "fill-current")} /> {likes > 0 && <span className="ml-1.5 text-xs">{likes}</span>}
+                <ThumbsUp className={cn("w-3.5 h-3.5", interaction === 'like' && "fill-current")} /> {likes > 0 && <span className="ml-1 sm:ml-1.5 text-xs">{likes}</span>}
               </Button>
               <div className={cn("w-[1px] h-3", likeDivider)}></div>
               <Button onClick={handleDislike} variant="ghost" size="sm" className={cn("rounded-r-full px-2 h-full transition-colors", interaction === 'dislike' ? (isPdf ? "bg-white/30 text-white" : "bg-red-100 text-red-700") : dislikeBtnGhost)}>
-                <ThumbsDown className={cn("w-3.5 h-3.5", interaction === 'dislike' && "fill-current")} /> {dislikes > 0 && <span className="ml-1.5 text-xs">{dislikes}</span>}
+                <ThumbsDown className={cn("w-3.5 h-3.5", interaction === 'dislike' && "fill-current")} /> {dislikes > 0 && <span className="ml-1 sm:ml-1.5 text-xs">{dislikes}</span>}
               </Button>
             </div>
-            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("hidden sm:flex rounded-full h-8 px-3 transition-colors", isSaved ? (isPdf ? "bg-white/30 text-white" : "bg-primary/10 text-primary dark:bg-primary/20") : btnGhost)}>
-              <Bookmark className={cn("w-3.5 h-3.5 mr-1.5", isSaved && "fill-current")} /> <span className="text-xs">{isSaved ? "Saved" : "Save"}</span>
+            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("hidden md:flex rounded-full h-8 px-3 transition-colors", savedBtnClass)}>
+              <Bookmark className={cn("w-3.5 h-3.5 mr-1.5", isSaved && "fill-current")} /> <span className="text-xs">{isSaved ? "Guardado" : "Guardar"}</span>
             </Button>
-            <Button onClick={handleDownload} size="sm" className={cn("bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-sm px-4 h-8 text-xs", isSpecialBg && "shadow-none border border-green-500")}>
-              <Download className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Download</span>
+            <Button onClick={handleDownload} size="sm" className={cn("bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-sm px-2.5 sm:px-4 h-8 text-xs", isSpecialBg && "shadow-none border border-green-500")}>
+              <Download className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Descargar</span>
             </Button>
           </div>
         </div>
@@ -230,11 +401,16 @@ export default function DocumentViewClient({
       {/* Header Estilo Imagen 2 */}
       <header className={cn("z-30 border-b px-4 py-4 sm:px-6 flex flex-col gap-3 relative transition-colors shrink-0", headerBg, isSpecialBg && "-mt-[88px] pt-[120px]")}>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold leading-tight truncate">
-              {file.nombre}
-            </h1>
-            <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-xs sm:text-sm", textMuted)}>
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <Button onClick={() => router.back()} variant="ghost" size="icon" className={cn("shrink-0 rounded-full -ml-2", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight truncate">
+                {file.nombre}
+              </h1>
+            </div>
+            <div className={cn("flex flex-col gap-2.5 mt-1 text-xs sm:text-sm pl-1", textMuted)}>
               {materia && (
                 <div className="flex items-center gap-1.5">
                   <span>Materia:</span>
@@ -285,29 +461,31 @@ export default function DocumentViewClient({
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className="font-medium capitalize">{dateStr ? format(new Date(dateStr), "d MMM yyyy, HH:mm", { locale: es }) : "2024"}</span>
+                <span className="opacity-50 text-[10px]">•</span>
+                <span className="flex items-center gap-1 font-medium" title={`${file.vistas || 0} vistas`}>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{file.vistas || 0}</span>
+                </span>
               </div>
             </div>
           </div>
         </div>
-
         {/* Action Bar */}
         <div className="flex items-center justify-between overflow-x-auto pb-1 scrollbar-hide">
           <Button 
-            onClick={isPdf ? handleDownload : undefined}
-            disabled={!isPdf}
+            onClick={isPdf || isCuaderno ? handleDownload : undefined}
+            disabled={!isPdf && !isCuaderno}
             className={cn(
               "rounded-full font-bold shadow-sm px-6 shrink-0", 
-              isPdf 
+              isPdf || isCuaderno
                 ? cn("bg-green-600 hover:bg-green-700 text-white", isSpecialBg && "shadow-none border border-green-500")
-                : isSpecialBg 
-                  ? "bg-white/20 text-white/70 cursor-not-allowed"
-                  : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 cursor-not-allowed"
+                : "bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 cursor-not-allowed"
             )}
           >
             <Download className="w-4 h-4 mr-2" /> 
-            {isPdf ? "Descargar" : "Descargar (WIP)"}
+            {isPdf || isCuaderno ? "Descargar" : "Descargar"}
           </Button>
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -320,7 +498,7 @@ export default function DocumentViewClient({
                 <ThumbsDown className={cn("w-4 h-4 mr-1.5", interaction === 'dislike' && "fill-current")} /> {dislikes}
               </Button>
             </div>
-            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", isSaved ? (isPdf ? "bg-red-600 hover:bg-red-700 text-white shadow-sm" : "bg-purple-600 hover:bg-purple-700 text-white shadow-sm") : btnGhost)}>
+            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", savedBtnClass)}>
               <Bookmark className={cn("w-4 h-4 mr-2", isSaved && "fill-current")} /> {isSaved ? "Guardado" : "Guardar"}
             </Button>
 
@@ -342,6 +520,13 @@ export default function DocumentViewClient({
           <VisorCuaderno file={file} onClose={() => router.back()} currentUserId={currentUser?.id} isAdmin={currentUser?.rol === 'admin'} onCollaboratorsLoad={setCollaborators} />
         )}
       </div>
+
+      <DownloadCuadernoModal 
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        onDownloadPdf={handleDownloadPdf}
+        onDownloadZip={handleDownloadZip}
+      />
     </main>
   );
 }
