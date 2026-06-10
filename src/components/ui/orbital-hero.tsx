@@ -37,10 +37,16 @@ interface OrbitalHeroProps {
 export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
     setMounted(true);
+    
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
     });
@@ -53,6 +59,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener("resize", handleResize);
     };
   }, [supabase]);
 
@@ -60,6 +67,10 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
   const displayItems = useMemo(() => {
     return [...items].sort(() => Math.random() - 0.5);
   }, [items]);
+
+  const renderMaterias = isMobile ? displayItems.filter(item => item.tipo === "materia").slice(0, 4) : displayItems.filter(item => item.tipo === "materia");
+  const renderArchivos = isMobile ? displayItems.filter(item => item.tipo !== "materia").slice(0, 4) : displayItems.filter(item => item.tipo !== "materia");
+  const renderUsers = isMobile ? users.slice(0, 4) : users;
 
   // If not mounted yet, render a static version to prevent hydration mismatches
   if (!mounted) {
@@ -93,7 +104,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
           className="absolute rounded-full flex items-center justify-center"
           style={{ width: "150vw", height: "150vw", minWidth: "1200px", minHeight: "1200px" }}
         >
-          {displayItems.filter(item => item.tipo === "materia").map((item, i, arr) => {
+          {renderMaterias.map((item, i, arr) => {
             const radius = 10 + Math.random() * 5; // Inner orbit (closer to center)
             const angle = (i / arr.length) * 360;
             const angleRad = (angle * Math.PI) / 180;
@@ -140,7 +151,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
           className="absolute rounded-full flex items-center justify-center"
           style={{ width: "150vw", height: "150vw", minWidth: "1200px", minHeight: "1200px" }}
         >
-          {displayItems.filter(item => item.tipo !== "materia").map((item, i, arr) => {
+          {renderArchivos.map((item, i, arr) => {
             const radius = 18 + Math.random() * 6; // Middle orbit
             const angle = (i / arr.length) * 360;
             const angleRad = (angle * Math.PI) / 180;
@@ -188,7 +199,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
             className="absolute rounded-full flex items-center justify-center"
             style={{ width: "150vw", height: "150vw", minWidth: "1200px", minHeight: "1200px" }}
           >
-            {users.map((u, i, arr) => {
+            {renderUsers.map((u, i, arr) => {
               const radius = 26 + Math.random() * 5; // Outermost orbit (now closer)
               const angle = (i / arr.length) * 360;
               const angleRad = (angle * Math.PI) / 180;
