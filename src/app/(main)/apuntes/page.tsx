@@ -45,44 +45,43 @@ export default async function ApuntesPage() {
           <Link
             key={semestre.id}
             href={`/apuntes/${semestre.slug}`}
-            className={`animate-fade-in stagger-${i + 1} group/link`}
+            className={`animate-fade-in stagger-${i + 1} group/link block outline-none`}
           >
-            <Card className="relative h-full overflow-hidden border border-border/50 bg-background/50 p-6 sm:p-8 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <Card className="relative h-full overflow-hidden border border-border/40 bg-card/40 backdrop-blur-xl p-5 sm:p-7 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1.5 group rounded-[1.5rem]">
+              {/* Efectos de fondo dinámicos */}
+              <div className="absolute -inset-0.5 bg-gradient-to-br from-primary/20 via-transparent to-primary/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 blur-2xl z-0" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-0" />
               
-              <div className="relative z-10 flex flex-col h-full gap-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner">
-                      <BookOpen className="size-7" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
-                        {semestre.nombre}
-                      </h3>
-                      <p className="text-sm font-medium text-muted-foreground mt-1">
-                        {semestre.periodo || "Periodo no definido"}
-                      </p>
-                    </div>
+              <div className="relative z-10 flex flex-col h-full gap-5 sm:gap-6">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex flex-col">
+                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">
+                      {semestre.nombre}
+                    </h3>
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-0.5">
+                      {semestre.periodo || "Periodo no definido"}
+                    </p>
                   </div>
-                  {semestre.activo ? (
-                    <Badge variant="default" className="shadow-sm shadow-primary/20 bg-primary hover:bg-primary px-3 py-1 text-xs uppercase tracking-wider font-bold">
-                      Semestre Actual
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="px-3 py-1 text-xs uppercase tracking-wider font-semibold">
-                      Próximo
-                    </Badge>
-                  )}
+                  <div className="self-start sm:self-auto">
+                    {semestre.activo ? (
+                      <Badge variant="default" className="shadow-sm shadow-primary/30 bg-primary hover:bg-primary/90 px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-bold rounded-full transition-transform hover:scale-105">
+                        Semestre Actual
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-semibold rounded-full bg-secondary/50 text-secondary-foreground/70 backdrop-blur-sm transition-colors hover:bg-secondary/70">
+                        Próximo
+                      </Badge>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-border/50 flex items-end justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                <div className="mt-auto pt-5 border-t border-border/40 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 flex-1">
                     {semestre.materiasList && semestre.materiasList.length > 0 ? (
                       semestre.materiasList.map((m) => (
                         <div
                           key={m.id}
-                          className="px-2 py-0.5 text-[10px] font-semibold rounded-full border shadow-sm transition-colors hover:brightness-110 line-clamp-1 max-w-full"
+                          className="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-full border shadow-sm transition-all duration-300 hover:brightness-110 hover:scale-105"
                           style={{
                             backgroundColor: `${m.color}15`,
                             color: m.color,
@@ -94,14 +93,14 @@ export default async function ApuntesPage() {
                         </div>
                       ))
                     ) : (
-                      <span className="text-xs font-medium text-muted-foreground">
+                      <span className="text-xs font-medium text-muted-foreground italic opacity-70">
                         Sin materias registradas
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex items-center text-sm font-bold text-primary opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 shrink-0 mb-1">
-                    Explorar <ChevronRight className="ml-1 size-4" />
+                  <div className="flex items-center text-xs sm:text-sm font-bold text-primary opacity-100 sm:opacity-0 sm:-translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 shrink-0 self-end sm:self-auto">
+                    Explorar <ChevronRight className="ml-1 size-4 sm:size-5 transition-transform duration-300 group-hover:translate-x-1.5" />
                   </div>
                 </div>
               </div>
