@@ -5,7 +5,7 @@ import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
 import { Download, ThumbsUp, ThumbsDown, Bookmark, Share, MoreHorizontal, FileText, Users, ArrowLeft, Eye } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -37,6 +37,8 @@ export default function DocumentViewClient({
   initialIsSaved?: boolean
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pageParam = searchParams?.get("page");
   const [isScrolled, setIsScrolled] = useState(false);
   
   const [likes, setLikes] = useState(initialLikes);
@@ -690,8 +692,8 @@ export default function DocumentViewClient({
       <ShareDialog 
         isOpen={isShareDialogOpen} 
         onOpenChange={setIsShareDialogOpen} 
-        title={`Compartir ${fileNombre}`}
-        text={`Mira este ${isCuaderno ? 'cuaderno' : 'documento'} en Most Cloud`}
+        title={`Compartir ${fileNombre}${pageParam ? ` - Página ${pageParam}` : ''}`}
+        text={pageParam ? `Mira la página ${pageParam} de este ${isCuaderno ? 'cuaderno' : 'documento'} en Most Cloud` : `Mira este ${isCuaderno ? 'cuaderno' : 'documento'} en Most Cloud`}
       />
 
       <Dialog open={isRenaming} onOpenChange={setIsRenaming}>

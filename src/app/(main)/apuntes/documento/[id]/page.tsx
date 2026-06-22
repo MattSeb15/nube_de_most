@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, ResolvingMetadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import DocumentViewClient from "./DocumentViewClient";
@@ -7,10 +7,13 @@ import { getDocumentBySlugOrId } from "@/lib/academic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps, parent: ResolvingMetadata): Promise<Metadata> {
   const { id } = await params;
+  const searchParamsObj = await searchParams;
+  const page = searchParamsObj.page;
   const file = await getDocumentBySlugOrId(id);
 
   if (!file) {
@@ -20,9 +23,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const materiaName = file.carpetas_apuntes?.materias?.nombre;
-  const title = file.nombre;
-  const description = `${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
-  const url = `/apuntes/documento/${file.slug || file.id}`;
+  let title = file.nombre;
+  let description = `${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
+  let url = `/apuntes/documento/${file.slug || file.id}`;
+
+  if (page && typeof page === 'string') {
+    title = `${file.nombre} - Página ${page}`;
+    description = `Página ${page} de ${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
+    url = `${url}?page=${page}`;
+  }
+
+  const previousImages = (await parent).openGraph?.images || [];
 
   return {
     title,
@@ -33,6 +44,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       url,
       type: "article",
+      images: previousImages,
     },
     twitter: {
       card: "summary_large_image",
@@ -42,7 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function DocumentoPage({ params }: PageProps) {
+export default async function DocumentoPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
