@@ -1,5 +1,6 @@
 import { FileText, CheckCircle2, FileImage, Image as ImageIcon, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
@@ -58,11 +59,15 @@ export default function AprenderArchivosPage() {
         </div>
 
         {/* Media Placeholder */}
-        <div className="my-8 rounded-3xl border border-border/50 bg-muted/30 aspect-video flex flex-col items-center justify-center relative overflow-hidden group">
-          <div className="absolute inset-0 bg-black/5"></div>
-          <ImageIcon className="w-16 h-16 text-primary mb-4 opacity-50" />
-          <p className="text-sm font-semibold text-foreground/80">Ejemplo de Visualizador de Cuadernos</p>
-          <span className="text-xs text-muted-foreground">(Imagen/Animación Próximamente)</span>
+        <div className="my-8 rounded-3xl border border-border/50 bg-muted/30 flex flex-col items-center justify-center relative overflow-hidden group shadow-md w-full">
+          <Image
+            src="/cuaderno_view.webp"
+            alt="Ejemplo de Visualizador de Cuadernos"
+            width={1200}
+            height={675}
+            className="w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            priority
+          />
         </div>
 
         <div className="mt-12 pt-8 border-t border-border/50">
