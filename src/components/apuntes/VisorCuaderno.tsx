@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { X, ChevronLeft, ChevronRight, Plus, Loader2, UploadCloud, Calendar, BookOpen, Maximize, Minimize, LayoutGrid, Trash2, Eye, EyeOff, ArrowLeft, ArrowRight, ImageIcon, User, Users, Book, ZoomIn, ZoomOut, MoreVertical } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ChevronDown, Plus, Loader2, UploadCloud, Calendar, BookOpen, Maximize, Minimize, LayoutGrid, Trash2, Eye, EyeOff, ArrowLeft, ArrowRight, ImageIcon, User, Users, Book, ZoomIn, ZoomOut, MoreVertical, ThumbsUp, ThumbsDown, Tag, Bookmark, List, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,20 +50,40 @@ interface VisorCuadernoProps {
   currentUserId?: string;
   isAdmin?: boolean;
   onCollaboratorsLoad?: (collaborators: any[]) => void;
+  interaction?: 'like' | 'dislike' | null;
+  onLike?: () => void;
+  onDislike?: () => void;
 }
 
-export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollaboratorsLoad }: VisorCuadernoProps) {
+export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollaboratorsLoad, interaction, onLike, onDislike }: VisorCuadernoProps) {
   const [paginas, setPaginas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+
+  const footerRef = useRef<HTMLDivElement>(null);
+  const [isFooterVisible, setIsFooterVisible] = useState(false);
+
+  useEffect(() => {
+    if (!footerRef.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting || entry.boundingClientRect.top < window.innerHeight) {
+        setIsFooterVisible(true);
+      } else {
+        setIsFooterVisible(false);
+      }
+    }, { threshold: 0 });
+    observer.observe(footerRef.current);
+    return () => observer.disconnect();
+  }, [paginas]);
   const [isDoublePage, setIsDoublePage] = useState(true);
   const [zoomedPage, setZoomedPage] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setIsDoublePage(false);
+      setShowIndexPanel(false);
     }
   }, []);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -85,11 +105,55 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
   const [showMultiOptimizer, setShowMultiOptimizer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+  
+  const [showIndexPanel, setShowIndexPanel] = useState(true);
+  const [editingEtiquetaId, setEditingEtiquetaId] = useState<string | null>(null);
+  const [etiquetaDraft, setEtiquetaDraft] = useState<string>("");
+  const [etiquetaGrupoDraft, setEtiquetaGrupoDraft] = useState<string>("");
+  const [etiquetaColorDraft, setEtiquetaColorDraft] = useState<string>("");
+  const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  const ETIQUETA_COLORS = [
+    { value: "bg-purple-600", color: "#9333ea" },
+    { value: "bg-blue-600", color: "#2563eb" },
+    { value: "bg-emerald-600", color: "#059669" },
+    { value: "bg-red-600", color: "#dc2626" },
+    { value: "bg-orange-500", color: "#f97316" },
+    { value: "bg-amber-500", color: "#f59e0b" },
+    { value: "bg-pink-600", color: "#db2777" },
+    { value: "bg-rose-500", color: "#f43f5e" },
+    { value: "bg-teal-600", color: "#0d9488" },
+    { value: "bg-slate-700", color: "#334155" }
+  ];
+
+  const getEtiquetaHexColor = (colorClass: string | undefined | null) => {
+    if (!colorClass) return "#9333ea";
+    const colorObj = ETIQUETA_COLORS.find(c => c.value === colorClass);
+    return colorObj ? colorObj.color : "#9333ea";
+  };
+
+  const handleUpdateEtiqueta = async (pageId: string, newValue: string, grupo: string = "", color: string = "") => {
+    const valueToSave = newValue.trim() === "" ? null : newValue.trim();
+    const grupoToSave = grupo.trim() === "" ? null : grupo.trim();
+    const colorToSave = color || ETIQUETA_COLORS[0].value;
+
+    const { error } = await supabase
+      .from("paginas_cuaderno")
+      .update({ etiqueta: valueToSave, etiqueta_grupo: grupoToSave, etiqueta_color: colorToSave })
+      .eq("id", pageId);
+      
+    if (!error) {
+      setPaginas(paginas.map(p => p.id === pageId ? { ...p, etiqueta: valueToSave, etiqueta_grupo: grupoToSave, etiqueta_color: colorToSave } : p));
+    }
+    setEditingEtiquetaId(null);
+    setShowColorPicker(null);
+  };
 
   const isOwner = (file as any).creador_id === currentUserId || file.creadorId === currentUserId || isAdmin;
   const canAddPage = isOwner || file.colaborativa;
 
-  const renderChip = (page: any) => {
+  const renderChip = (page: any, isRightPage: boolean = false) => {
     if (!file.colaborativa || !page?.perfiles) return null;
     
     const isCurrentUser = page.creador_id === currentUserId;
@@ -107,9 +171,23 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
 
     return (
       <div 
-        className="absolute top-4 left-4 z-20 pointer-events-auto origin-top-left transition-transform duration-300"
+        className={`absolute -top-12 ${isRightPage ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left'} z-20 pointer-events-auto transition-all duration-300 ${zoomLevel !== 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'} flex flex-row gap-2 ${isRightPage ? 'justify-end' : 'justify-start'}`}
         style={{ transform: `scale(${1 / zoomLevel})` }}
       >
+        {page.etiqueta && (
+          <div 
+            style={{ backgroundColor: `${getEtiquetaHexColor(page.etiqueta_color)}e6` }}
+            className="backdrop-blur-md rounded-full text-white px-3 py-1.5 flex items-center gap-1.5 shadow-md border border-white/20"
+          >
+            <Tag className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold">{page.etiqueta}</span>
+            {page.etiqueta_grupo && (
+              <span className="text-[9px] font-bold uppercase opacity-80 tracking-wider shrink-0 bg-black/25 px-1.5 py-0.5 rounded ml-1">
+                {page.etiqueta_grupo}
+              </span>
+            )}
+          </div>
+        )}
         <Link 
           href={profileUrl}
           className={`backdrop-blur-md rounded-full text-white px-2.5 py-1.5 flex items-center gap-2 shadow-md border transition-all hover:scale-105 ${bgColor}`}
@@ -123,7 +201,7 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
           </div>
         )}
         <div className="flex flex-col items-start leading-none">
-          <span className="text-[11px] sm:text-xs truncate max-w-[80px] sm:max-w-[140px] font-medium opacity-90">
+          <span className="text-[11px] sm:text-xs truncate max-w-[120px] sm:max-w-[200px] font-medium opacity-90">
             {isCurrentUser ? "Tú" : page.perfiles.nombre_completo}
           </span>
           {formattedDate && (
@@ -177,19 +255,10 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
 
   useEffect(() => {
     const checkOverflow = () => {
-      if (containerRef.current && contentRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const contentRect = contentRef.current.getBoundingClientRect();
-        // Allow a small margin of error (5px)
-        const isOverflowing = contentRect.height > containerRect.height + 5 || contentRect.width > containerRect.width + 5;
-        setCanPan(zoomLevel > 1 || isOverflowing);
-      }
+      setCanPan(true);
     };
     
     checkOverflow();
-    // Re-check on resize
-    window.addEventListener('resize', checkOverflow);
-    return () => window.removeEventListener('resize', checkOverflow);
   }, [zoomLevel, isFullscreen, isDoublePage, paginas.length]);
 
   useEffect(() => {
@@ -197,6 +266,7 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
       setPan({ x: 0, y: 0 });
     }
   }, [canPan]);
+
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!canPan) return;
@@ -278,6 +348,41 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
   }
 
   const paginasVisibles = isEditing ? paginas : paginas.filter((p: any) => !p.oculta);
+
+  const groupedTags = React.useMemo(() => {
+    type TagGroup = { groupName: string, tags: { tag: string, color: string, index: number }[] };
+    const groups: TagGroup[] = [];
+    const seenTags = new Set<string>();
+    const defaultGroup: TagGroup = { groupName: "Otras Etiquetas", tags: [] };
+    
+    paginasVisibles.forEach((page, idx) => {
+      if (page.etiqueta && !seenTags.has(page.etiqueta)) {
+        seenTags.add(page.etiqueta);
+        
+        const tagObj = { 
+          tag: page.etiqueta, 
+          color: page.etiqueta_color || "bg-purple-600",
+          index: idx 
+        };
+        
+        if (!page.etiqueta_grupo) {
+          defaultGroup.tags.push(tagObj);
+        } else {
+          let group = groups.find(g => g.groupName === page.etiqueta_grupo);
+          if (!group) {
+            group = { groupName: page.etiqueta_grupo, tags: [] };
+            groups.push(group);
+          }
+          group.tags.push(tagObj);
+        }
+      }
+    });
+    
+    if (defaultGroup.tags.length > 0) {
+      groups.push(defaultGroup);
+    }
+    return groups;
+  }, [paginasVisibles]);
 
   useEffect(() => {
     if (!isEditing && currentPageIndex >= paginasVisibles.length) {
@@ -469,8 +574,8 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
   const getPageDate = (page: any) => page?.fecha_clase || page?.fechaClase;
 
   const baseWidth = isFullscreen 
-      ? (isDoublePage ? "min(44vw, 110vh)" : "min(95vw, 150vh)") 
-      : (isDoublePage ? "min(40vw, 95vh, 700px)" : "min(90vw, 120vh, 1000px)");
+      ? (isDoublePage ? "min(45vw, calc((100dvh - 70px) * 0.707))" : "min(95vw, calc((100dvh - 70px) * 0.707))") 
+      : (isDoublePage ? "min(45vw, calc((100dvh - 130px) * 0.707), 800px)" : "min(95vw, calc((100dvh - 130px) * 0.707), 1200px)");
 
   const pageStyle = {
     width: baseWidth,
@@ -492,14 +597,14 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
     <div className={
       isFullscreen 
         ? "fixed inset-0 z-[100] w-screen h-screen bg-[#f5efff] dark:bg-[#130924] flex flex-col overflow-hidden animate-fade-in backdrop-blur-xl"
-        : "w-full h-[calc(100dvh-150px)] bg-[#f5efff] dark:bg-[#130924] flex flex-col relative"
+        : "w-full min-h-screen bg-[#f5efff] dark:bg-[#130924] flex flex-col relative rounded-t-xl overflow-visible"
     }>
 
       {/* Body */}
       <div className={`flex-1 min-h-0 relative flex bg-transparent ${isFullscreen ? "overflow-hidden" : ""}`}>
         {loading ? (
           <div className="w-full relative flex flex-col items-center overflow-hidden pointer-events-none">
-            <div className={`flex justify-center py-8 sm:py-16 min-w-max ${isFullscreen ? "mx-auto" : "m-auto"} origin-top`}>
+            <div className={`flex justify-center py-4 sm:py-8 min-w-max ${isFullscreen ? "mx-auto" : "m-auto"} origin-center`}>
               <div 
                 className={`flex justify-center items-center relative perspective-[2500px] min-w-max ${
                 isFullscreen
@@ -545,7 +650,10 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
               
               {canAddPage && (
                 <button 
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    setFilesToOptimize([]);
+                    setShowMultiOptimizer(true);
+                  }}
                   disabled={uploading}
                   className="w-full max-w-xs py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-semibold transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed group"
                 >
@@ -589,7 +697,7 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
                   </div>
                   
                   {/* Edges Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex flex-col justify-between p-3 opacity-0 group-hover:opacity-100 pointer-events-none">
+                  <div className="absolute inset-0 bg-black/30 md:bg-black/0 md:group-hover:bg-black/40 transition-colors flex flex-col justify-between p-3 pb-[4.5rem] opacity-100 md:opacity-0 md:group-hover:opacity-100 pointer-events-none">
                     <div className="flex justify-between items-center gap-2">
                       <div className="flex items-center gap-1.5">
                         <div className="px-2 py-1 bg-black/60 backdrop-blur-md rounded-md text-white text-xs font-bold shadow-sm flex items-center justify-center min-w-[28px]">
@@ -657,8 +765,90 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
                     )}
                   </div>
                   
+                  {/* Tag Overlay */}
+                  <div className={`absolute bottom-3 left-3 right-3 pointer-events-auto transition-opacity z-20 ${page.etiqueta || (userCanEditPage && editingEtiquetaId === page.id) ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}>
+                    {editingEtiquetaId === page.id ? (
+                      <div className="flex flex-col gap-1.5 w-full bg-white/95 dark:bg-black/90 backdrop-blur-md border border-purple-500 shadow-lg rounded-xl p-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          value={etiquetaGrupoDraft}
+                          onChange={(e) => setEtiquetaGrupoDraft(e.target.value)}
+                          placeholder="Grupo (ej: Unidad 1)"
+                          className="w-full text-[11px] py-1 px-2 min-w-0 bg-neutral-100 dark:bg-white/5 rounded-md outline-none text-neutral-900 dark:text-white placeholder:text-neutral-500"
+                        />
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative">
+                            <button 
+                              onClick={() => setShowColorPicker(showColorPicker === page.id ? null : page.id)}
+                              className="w-5 h-5 rounded-full shrink-0 border border-neutral-300 dark:border-white/20 shadow-sm transition-transform hover:scale-105"
+                              style={{ backgroundColor: ETIQUETA_COLORS.find(c => c.value === etiquetaColorDraft)?.color || ETIQUETA_COLORS[0].color }}
+                              title="Escoger color"
+                            />
+                            {showColorPicker === page.id && (
+                              <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-white/10 flex gap-1 z-[100]">
+                                {ETIQUETA_COLORS.map(colorObj => (
+                                  <button
+                                    key={colorObj.value}
+                                    onClick={() => { setEtiquetaColorDraft(colorObj.value); setShowColorPicker(null); }}
+                                    className="w-5 h-5 rounded-full border border-neutral-300 dark:border-white/20 hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: colorObj.color }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            autoFocus
+                            value={etiquetaDraft}
+                            onChange={(e) => setEtiquetaDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleUpdateEtiqueta(page.id, etiquetaDraft, etiquetaGrupoDraft, etiquetaColorDraft);
+                              } else if (e.key === "Escape") {
+                                setEditingEtiquetaId(null);
+                                setShowColorPicker(null);
+                              }
+                            }}
+                            placeholder="Etiqueta..."
+                            className="flex-1 text-xs py-1 px-2 min-w-0 bg-neutral-100 dark:bg-white/5 rounded-md outline-none text-neutral-900 dark:text-white placeholder:text-neutral-500"
+                          />
+                          <button 
+                            onClick={() => handleUpdateEtiqueta(page.id, etiquetaDraft, etiquetaGrupoDraft, etiquetaColorDraft)}
+                            className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white p-1 rounded-md shadow-sm transition-colors"
+                            title="Guardar etiqueta"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (userCanEditPage) {
+                            setEtiquetaDraft(page.etiqueta || "");
+                            setEtiquetaGrupoDraft(page.etiqueta_grupo || "");
+                            setEtiquetaColorDraft(page.etiqueta_color || ETIQUETA_COLORS[0].value);
+                            setEditingEtiquetaId(page.id);
+                          }
+                        }}
+                        style={page.etiqueta ? { backgroundColor: `${getEtiquetaHexColor(page.etiqueta_color)}f2` } : undefined}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg max-w-full transition-all ${userCanEditPage ? "cursor-pointer hover:scale-[1.02] hover:shadow-xl" : "cursor-default"} ${page.etiqueta ? "border border-white/20 text-white" : "bg-black/60 border border-white/10 text-white hover:bg-black/80"}`}
+                      >
+                        <Tag className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                        <span className="text-[11px] font-medium truncate flex-1 text-left">
+                          {page.etiqueta || (userCanEditPage ? "Añadir título/etiqueta" : "Sin título")}
+                        </span>
+                        {page.etiqueta_grupo && (
+                          <span className="text-[9px] font-bold uppercase opacity-60 tracking-wider shrink-0 bg-black/20 px-1.5 py-0.5 rounded-sm">
+                            {page.etiqueta_grupo}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {isHidden && canAddPage && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/80 text-white text-xs font-bold rounded-lg pointer-events-none shadow-md">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/80 text-white text-xs font-bold rounded-lg pointer-events-none shadow-md z-10">
                       Oculta
                     </div>
                   )}
@@ -672,6 +862,101 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
           </div>
         ) : (
           <div className="relative w-full h-full flex flex-col flex-1 perspective-[1200px]">
+            {/* Index Panel (Floating Left / Side Drawer on Mobile) */}
+            <AnimatePresence>
+              {showIndexPanel && groupedTags.length > 0 && (
+                <motion.div
+                  key="index-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowIndexPanel(false)}
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[85] md:hidden"
+                />
+              )}
+              {showIndexPanel && groupedTags.length > 0 && (
+                <div className="fixed md:absolute inset-y-0 md:inset-y-auto left-0 md:left-4 top-0 md:top-4 z-[90] w-full md:w-auto h-full md:h-auto pointer-events-none flex items-center md:items-start">
+                  <motion.div
+                    key="index-panel"
+                    initial={{ x: "-100%", opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: "-100%", opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="pointer-events-auto w-[calc(100%-2rem)] max-w-[280px] md:w-64 max-h-[55vh] md:max-h-[calc(100%-8rem)] ml-4 md:ml-0 overflow-y-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1c]/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-neutral-200 dark:border-white/10 p-4 flex flex-col"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                        <Bookmark className="w-5 h-5" />
+                        <h3 className="font-semibold text-neutral-900 dark:text-white">Índice</h3>
+                      </div>
+                      <button 
+                        onClick={() => setShowIndexPanel(false)}
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4 text-neutral-500" />
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {groupedTags.map((group, groupIdx) => {
+                        const isCollapsed = collapsedGroups.has(group.groupName);
+                        return (
+                          <div key={groupIdx} className="flex flex-col gap-1">
+                            <button
+                              onClick={() => {
+                                const newSet = new Set(collapsedGroups);
+                                if (isCollapsed) newSet.delete(group.groupName);
+                                else newSet.add(group.groupName);
+                                setCollapsedGroups(newSet);
+                              }}
+                              className="flex items-center justify-between px-2 py-1.5 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-md transition-colors group"
+                            >
+                              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200 transition-colors">
+                                {group.groupName}
+                              </span>
+                              <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                            </button>
+                            
+                            <AnimatePresence initial={false}>
+                              {!isCollapsed && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="flex flex-col gap-0.5 overflow-hidden"
+                                >
+                                  {group.tags.map((t, i) => {
+                                    const isActive = currentPageIndex === t.index || (isDoublePage && currentPageIndex + 1 === t.index);
+                                    const colorHex = ETIQUETA_COLORS.find(c => c.value === t.color)?.color || "#9333ea";
+                                    return (
+                                      <button
+                                        key={i}
+                                        onClick={() => {
+                                          setDirection(t.index > currentPageIndex ? 1 : -1);
+                                          setCurrentPageIndex(isDoublePage ? (t.index % 2 === 0 ? t.index : t.index - 1) : t.index);
+                                          if (window.innerWidth < 768) {
+                                            setShowIndexPanel(false);
+                                          }
+                                        }}
+                                        className={`flex items-center gap-2 text-left px-3 py-2 text-sm rounded-lg transition-all border ${isActive ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-500/30 text-purple-700 dark:text-purple-300 font-medium" : "border-transparent hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400"}`}
+                                      >
+                                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colorHex }} />
+                                        <span className="truncate flex-1">{t.tag}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
             {/* Page Display (Notebook View) */}
             <div 
               ref={containerRef} 
@@ -683,7 +968,7 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
             >
               <div 
                 ref={contentRef}
-                className={`flex justify-center py-8 sm:py-16 min-w-max ${isFullscreen ? "mx-auto" : "m-auto"} origin-top select-none`}
+                className={`flex justify-center pt-16 pb-4 sm:pt-24 sm:pb-8 min-w-max ${isFullscreen ? "mx-auto" : "m-auto"} origin-center select-none`}
                 style={{ 
                   transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`,
                   transition: isDragging ? "none" : "transform 0.3s ease-out"
@@ -727,12 +1012,12 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
                               initial="enter" animate="center" exit="exit"
                               transition={{ duration: 0.5, ease: "easeInOut" }}
                               style={{ transformOrigin: "right center" }}
-                              className="absolute inset-0 bg-white dark:bg-[#1c1c1c] shadow-2xl rounded-xl overflow-hidden flex items-center justify-center p-2 sm:p-6 transition-transform"
+                              className="absolute inset-0 bg-white dark:bg-[#1c1c1c] shadow-2xl rounded-xl flex items-center justify-center p-2 sm:p-6 transition-transform"
                             >
                               {leftPage && (
                                 <>
                                   <img src={getPageUrl(leftPage)} alt={`Página ${currentPageIndex + 1}`} className="w-full h-full object-contain pointer-events-none" draggable={false} loading="lazy" />
-                                  {renderChip(leftPage)}
+                                  {renderChip(leftPage, false)}
                                 </>
                               )}
                             </motion.div>
@@ -769,12 +1054,12 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
                                 initial="enter" animate="center" exit="exit"
                                 transition={{ duration: 0.5, ease: "easeInOut" }}
                                 style={{ transformOrigin: "left center" }}
-                                className="absolute inset-0 bg-white dark:bg-[#1c1c1c] shadow-2xl rounded-xl overflow-hidden flex items-center justify-center p-2 sm:p-6 transition-transform"
+                                className="absolute inset-0 bg-white dark:bg-[#1c1c1c] shadow-2xl rounded-xl flex items-center justify-center p-2 sm:p-6 transition-transform"
                               >
                                 {rightPage && (
                                   <>
                                     <img src={getPageUrl(rightPage)} alt={`Página ${currentPageIndex + 2}`} className="w-full h-full object-contain pointer-events-none" draggable={false} loading="lazy" />
-                                    {renderChip(rightPage)}
+                                    {renderChip(rightPage, true)}
                                   </>
                                 )}
                               </motion.div>
@@ -855,10 +1140,13 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
 
       {/* Barra Flotante Inferior estilo PDF */}
       {paginas.length > 0 && (
-        <div className={`sticky bottom-4 sm:bottom-6 z-[60] self-center w-fit max-w-[95vw] mb-4 mt-auto pointer-events-none flex items-center justify-center gap-2 sm:gap-3 transition-opacity duration-300 overflow-x-auto no-scrollbar p-2 ${showOptimizer || showMultiOptimizer ? 'opacity-0' : 'opacity-100'}`}>
+        <div className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-[60] w-fit max-w-[95vw] pointer-events-none flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 overflow-x-auto no-scrollbar p-2 ${showOptimizer || showMultiOptimizer || (isFooterVisible && !isFullscreen) ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'}`}>
         {canAddPage && (
           <button 
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              setFilesToOptimize([]);
+              setShowMultiOptimizer(true);
+            }}
             disabled={uploading}
             className="shrink-0 bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black rounded-full p-2.5 sm:px-5 sm:py-2.5 flex items-center justify-center gap-0 sm:gap-2 shadow-2xl pointer-events-auto transition-all disabled:opacity-70 disabled:cursor-not-allowed font-medium text-sm border border-transparent dark:border-neutral-200"
           >
@@ -904,6 +1192,11 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
 
             {/* Acciones Adicionales (PC) */}
             <div className="hidden sm:flex items-center gap-1 sm:gap-2">
+              {groupedTags.length > 0 && !isEditing && (
+                <button onClick={() => setShowIndexPanel(!showIndexPanel)} className={`p-1.5 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full transition-colors ${showIndexPanel ? 'text-purple-600 dark:text-purple-400' : ''}`} title="Índice de temas">
+                  <List className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )}
               <button onClick={toggleFullscreen} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full transition-colors" title={isFullscreen ? "Minimizar" : "Pantalla completa"}>
                 {isFullscreen ? <Minimize className="w-4 h-4 sm:w-5 sm:h-5" /> : <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
@@ -924,6 +1217,12 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
                   <MoreVertical className="w-4 h-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="z-[110] mb-2 bg-white/95 dark:bg-[#1c1c1c]/95 backdrop-blur-md rounded-2xl border-neutral-200 dark:border-white/10 p-2 shadow-xl" sideOffset={12}>
+                  {groupedTags.length > 0 && !isEditing && (
+                    <DropdownMenuItem onClick={() => setShowIndexPanel(!showIndexPanel)} className="rounded-xl cursor-pointer text-sm font-medium py-2.5 px-3">
+                      <List className="w-4 h-4 mr-3 opacity-70" />
+                      Índice de temas
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => setIsDoublePage(!isDoublePage)} className="rounded-xl cursor-pointer text-sm font-medium py-2.5 px-3">
                     {isDoublePage ? <BookOpen className="w-4 h-4 mr-3 opacity-70" /> : <Book className="w-4 h-4 mr-3 opacity-70" />}
                     {isDoublePage ? "Modo 1 Hoja" : "Modo Cuaderno"}
@@ -951,6 +1250,46 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
     return createPortal(content, document.body);
   }
 
-  return content;
+  return (
+    <>
+      {content}
+      
+      {/* End of document section */}
+      {!isFullscreen && paginas.length > 0 && (
+        <div className="w-full bg-background" ref={footerRef}>
+          <div className="max-w-4xl mx-auto py-16 px-6 flex flex-col items-center">
+            <div className="flex items-center gap-4 mb-8 w-full">
+              <div className="flex-1 h-px bg-border"></div>
+              <span className="text-sm text-muted-foreground font-medium">Fin del cuaderno</span>
+              <div className="flex-1 h-px bg-border"></div>
+            </div>
+            <h3 className="text-xl font-bold mb-6 text-foreground">¿Te fue útil este apunte?</h3>
+            <div className="flex gap-4">
+              <button 
+                onClick={onLike}
+                className={`px-6 py-2.5 border rounded-full flex items-center gap-2 font-medium transition-colors ${
+                  interaction === 'like' 
+                    ? "bg-green-100 border-green-300 text-green-700 dark:bg-green-900/40 dark:border-green-700 dark:text-green-400"
+                    : "bg-muted border-border text-foreground hover:bg-green-50 hover:text-green-600 hover:border-green-300 dark:hover:bg-green-950/40 dark:hover:text-green-400 dark:hover:border-green-700"
+                }`}
+              >
+                <ThumbsUp className={`w-4 h-4 ${interaction === 'like' ? "fill-current" : ""}`} /> Sí
+              </button>
+              <button 
+                onClick={onDislike}
+                className={`px-6 py-2.5 border rounded-full flex items-center gap-2 font-medium transition-colors ${
+                  interaction === 'dislike'
+                    ? "bg-red-100 border-red-300 text-red-700 dark:bg-red-900/40 dark:border-red-700 dark:text-red-400"
+                    : "bg-muted border-border text-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-300 dark:hover:bg-red-950/40 dark:hover:text-red-400 dark:hover:border-red-700"
+                }`}
+              >
+                <ThumbsDown className={`w-4 h-4 ${interaction === 'dislike' ? "fill-current" : ""}`} /> No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 

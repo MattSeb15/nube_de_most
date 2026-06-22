@@ -233,8 +233,12 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
   useEffect(() => {
     if (!footerRef.current) return;
     const observer = new IntersectionObserver(([entry]) => {
-      setIsFooterVisible(entry.isIntersecting);
-    }, { threshold: 0.1 });
+      if (entry.isIntersecting || entry.boundingClientRect.top < window.innerHeight) {
+        setIsFooterVisible(true);
+      } else {
+        setIsFooterVisible(false);
+      }
+    }, { threshold: 0 });
     observer.observe(footerRef.current);
     return () => observer.disconnect();
   }, [blobUrl]);
@@ -527,11 +531,6 @@ export function VisorPDF({ file, currentUser, onClose, interaction, onLike, onDi
         {/* Viewer Body */}
         <div 
           className="relative min-w-max"
-          onWheelCapture={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              e.stopPropagation();
-            }
-          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}

@@ -35,6 +35,7 @@ export function MultiImageUploadModal({
 }: MultiImageUploadModalProps) {
   const [fileItems, setFileItems] = useState<FileItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [quality] = useState<number>(5);
   const [zoomedItemId, setZoomedItemId] = useState<string | null>(null);
   const [zoomedOptimizedUrl, setZoomedOptimizedUrl] = useState<string | null>(null);
@@ -54,24 +55,26 @@ export function MultiImageUploadModal({
   }, [zoomedItem?.optimizedBlob]);
 
   useEffect(() => {
-    if (!isOpen || files.length === 0) {
+    if (!isOpen) {
       setFileItems([]);
       return;
     }
 
-    const items: FileItem[] = files.map(file => ({
-      id: uuidv4(),
-      originalFile: file,
-      previewUrl: URL.createObjectURL(file),
-      originalSize: file.size,
-      status: 'pending'
-    }));
+    if (files && files.length > 0) {
+      const items: FileItem[] = files.map(file => ({
+        id: uuidv4(),
+        originalFile: file,
+        previewUrl: URL.createObjectURL(file),
+        originalSize: file.size,
+        status: 'pending'
+      }));
+      setFileItems(items);
+      processQueue(items);
+    }
+  }, [isOpen]);
 
-    setFileItems(items);
-
+  const processQueue = async (queueItems: FileItem[]) => {
     let isMounted = true;
-
-    const processQueue = async (queueItems: FileItem[]) => {
       for (const item of queueItems) {
         if (!isMounted) break;
 
@@ -128,15 +131,38 @@ export function MultiImageUploadModal({
       }
     };
 
-    processQueue(items);
 
-    return () => {
-      isMounted = false;
-      items.forEach(item => {
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-      });
-    };
-  }, [files, isOpen, quality, maxWidth, maxHeight]);
+    
+  const handleAddFiles = (newFiles: File[]) => {
+    const items: FileItem[] = newFiles.map(file => ({
+      id: uuidv4(),
+      originalFile: file,
+      previewUrl: URL.createObjectURL(file),
+      originalSize: file.size,
+      status: 'pending'
+    }));
+    setFileItems(prev => [...prev, ...items]);
+    processQueue(items);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (droppedFiles.length > 0) handleAddFiles(droppedFiles);
+    }
+  };
 
 
 
@@ -198,7 +224,7 @@ export function MultiImageUploadModal({
 
   const processedCount = fileItems.filter(item => item.status === 'done' || item.status === 'error').length;
   const progressPercent = fileItems.length > 0 ? Math.round((processedCount / fileItems.length) * 100) : 0;
-  const allProcessed = fileItems.length > 0 && processedCount === fileItems.length;
+  const allProcessed = fileItems.length === 0 || processedCount === fileItems.length;
   
   const totalOriginalSize = fileItems.reduce((acc, item) => acc + item.originalSize, 0);
   const totalOptimizedSize = fileItems.reduce((acc, item) => acc + (item.optimizedBlob?.size || 0), 0);
@@ -242,7 +268,12 @@ export function MultiImageUploadModal({
           )}
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-neutral-100/30 dark:bg-neutral-900/30 flex flex-col lg:flex-row gap-6">
+        <div 
+          className="flex-1 overflow-y-auto p-4 sm:p-6 bg-neutral-100/30 dark:bg-neutral-900/30 flex flex-col lg:flex-row gap-6 relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           
           {/* Main List Area */}
           <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto pr-2 custom-scrollbar">
@@ -332,8 +363,36 @@ export function MultiImageUploadModal({
                 })}
               </AnimatePresence>
               {fileItems.length === 0 && (
-                <div className="text-center p-8 text-neutral-500 dark:text-neutral-400 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
-                  No hay imágenes seleccionadas.
+                <div 
+                  className={`m-2 text-center p-8 sm:p-12 text-neutral-500 dark:text-neutral-400 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 transition-colors ${
+                    isDragging 
+                      ? 'border-purple-500 bg-purple-50/80 dark:border-purple-500/80 dark:bg-purple-900/20 scale-[1.02] shadow-lg' 
+                      : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#151515] hover:border-purple-500/50 hover:bg-purple-50/50 dark:hover:bg-purple-900/10'
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+                    isDragging ? 'bg-purple-200 dark:bg-purple-900/50' : 'bg-purple-100 dark:bg-purple-900/30'
+                  }`}>
+                    <Images className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-1">Arrastra tus imágenes aquí</h3>
+                    <p className="text-sm">o haz clic en el botón para seleccionarlas</p>
+                  </div>
+                  <label className="mt-2 cursor-pointer bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm transition-all flex items-center gap-2">
+                    <ArrowUp className="w-4 h-4" />
+                    Explorar imágenes
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple 
+                      className="hidden" 
+                      onChange={(e) => {
+                        if (e.target.files) handleAddFiles(Array.from(e.target.files));
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
                 </div>
               )}
             </ul>
@@ -389,33 +448,55 @@ export function MultiImageUploadModal({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm shrink-0 flex flex-row justify-end gap-3">
-          <Button 
-            variant="outline" 
-            onClick={onClose} 
-            disabled={isUploading}
-            className="border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleUpload} 
-            disabled={isUploading || !allProcessed || fileItems.length === 0}
-            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Subiendo {fileItems.length}...
-              </>
-            ) : (
-              <>
-                {allProcessed ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Subir {fileItems.length} página{fileItems.length !== 1 ? 's' : ''}
-              </>
+
+
+        <DialogFooter className="p-6 pt-4 border-t border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm shrink-0 flex flex-row justify-between items-center gap-3">
+          <div>
+            {fileItems.length > 0 && (
+              <label className="cursor-pointer text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20">
+                <Images className="w-4 h-4" />
+                Añadir más páginas
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  className="hidden" 
+                  onChange={(e) => {
+                    if (e.target.files) handleAddFiles(Array.from(e.target.files));
+                    e.target.value = '';
+                  }}
+                />
+              </label>
             )}
-          </Button>
+          </div>
+          <div className="flex flex-row gap-3">
+            <Button 
+              variant="outline" 
+              onClick={onClose} 
+              disabled={isUploading}
+              className="border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleUpload} 
+              disabled={isUploading || !allProcessed || fileItems.length === 0}
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo {fileItems.length}...
+                </>
+              ) : (
+                <>
+                  {allProcessed ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Subir {fileItems.length} página{fileItems.length !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
 

@@ -39,26 +39,29 @@ export function MultiPdfUploadModal({
   const [isUploading, setIsUploading] = useState(false);
   const [quality] = useState<number>(0.80); // 80% JPEG quality
   const [scale] = useState<number>(1.5); // 1.5x scale for render
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || files.length === 0) {
+    if (!isOpen) {
       setFileItems([]);
       return;
     }
 
-    const items: FileItem[] = files.map(file => ({
-      id: uuidv4(),
-      originalFile: file,
-      previewUrl: URL.createObjectURL(file), // Usaremos el object URL para cargar con pdf.js
-      originalSize: file.size,
-      status: 'pending' // Empezamos en pending, y los iremos actualizando
-    }));
+    if (files && files.length > 0) {
+      const items: FileItem[] = files.map(file => ({
+        id: uuidv4(),
+        originalFile: file,
+        previewUrl: URL.createObjectURL(file),
+        originalSize: file.size,
+        status: 'pending'
+      }));
+      setFileItems(items);
+      processAllFiles(items);
+    }
+  }, [isOpen]); // Only run on isOpen change, we will handle file additions manually
 
-    setFileItems(items);
-
+  const processAllFiles = async (itemsToProcess: FileItem[]) => {
     let isActive = true;
-
-    const processAllFiles = async (itemsToProcess: FileItem[]) => {
       for (const item of itemsToProcess) {
         if (!isActive) break;
 
@@ -81,7 +84,6 @@ export function MultiPdfUploadModal({
             let doc: jsPDF | null = null;
 
             for (let i = 1; i <= numPages; i++) {
-              if (!isActive) return null;
               const page = await pdfDoc.getPage(i);
               const viewport = page.getViewport({ scale });
 
@@ -98,8 +100,6 @@ export function MultiPdfUploadModal({
               };
 
               await page.render(renderContext).promise;
-
-              if (!isActive) return null;
 
               // Convertir a JPEG para mejor compatibilidad con jsPDF
               const imgData = canvas.toDataURL("image/jpeg", quality);
@@ -125,8 +125,6 @@ export function MultiPdfUploadModal({
 
           const result = await Promise.race([optimizePromise(), timeoutPromise]) as any;
 
-          if (!isActive) return;
-
           if (result && result.doc) {
             const optimizedBlob = result.doc.output('blob');
             
@@ -145,7 +143,6 @@ export function MultiPdfUploadModal({
           }
 
         } catch (error) {
-          if (!isActive) return;
           console.error("Error optimizando PDF:", error);
           // Fallback: si falla la optimización, usamos el archivo original
           setFileItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'done', optimizedBlob: item.originalFile } : p));
@@ -153,15 +150,38 @@ export function MultiPdfUploadModal({
       }
     };
 
-    processAllFiles(items);
 
-    return () => {
-      isActive = false;
-      items.forEach(item => {
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-      });
-    };
-  }, [files, isOpen, quality, scale]);
+
+  const handleAddFiles = (newFiles: File[]) => {
+    const items: FileItem[] = newFiles.map(file => ({
+      id: uuidv4(),
+      originalFile: file,
+      previewUrl: URL.createObjectURL(file),
+      originalSize: file.size,
+      status: 'pending'
+    }));
+    setFileItems(prev => [...prev, ...items]);
+    processAllFiles(items);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+      if (droppedFiles.length > 0) handleAddFiles(droppedFiles);
+    }
+  };
 
   const handleUpload = async () => {
     setIsUploading(true);
@@ -219,7 +239,7 @@ export function MultiPdfUploadModal({
     setFileItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const allProcessed = fileItems.length > 0 && fileItems.every(item => item.status === 'done' || item.status === 'error');
+  const allProcessed = fileItems.length === 0 || fileItems.every(item => item.status === 'done' || item.status === 'error');
   const totalOriginalSize = fileItems.reduce((acc, item) => acc + item.originalSize, 0);
   const totalOptimizedSize = fileItems.reduce((acc, item) => acc + (item.optimizedBlob?.size || item.originalSize), 0);
   const totalSavings = totalOriginalSize > 0 && totalOptimizedSize < totalOriginalSize
@@ -239,7 +259,12 @@ export function MultiPdfUploadModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-neutral-100/30 dark:bg-neutral-900/30 flex flex-col lg:flex-row gap-6">
+        <div 
+          className="flex-1 overflow-y-auto p-4 sm:p-6 bg-neutral-100/30 dark:bg-neutral-900/30 flex flex-col lg:flex-row gap-6 relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           
           {/* Main List Area */}
           <div className="flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto pr-2 custom-scrollbar">
@@ -322,8 +347,36 @@ export function MultiPdfUploadModal({
                 })}
               </AnimatePresence>
               {fileItems.length === 0 && (
-                <div className="text-center p-8 text-neutral-500 dark:text-neutral-400 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
-                  No hay archivos seleccionados.
+                <div 
+                  className={`m-2 text-center p-8 sm:p-12 text-neutral-500 dark:text-neutral-400 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 transition-colors ${
+                    isDragging 
+                      ? 'border-red-500 bg-red-50/80 dark:border-red-500/80 dark:bg-red-900/20 scale-[1.02] shadow-lg' 
+                      : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#151515] hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-900/10'
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+                    isDragging ? 'bg-red-200 dark:bg-red-900/50' : 'bg-red-100 dark:bg-red-900/30'
+                  }`}>
+                    <FileText className="w-8 h-8 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-1">Arrastra tus PDFs aquí</h3>
+                    <p className="text-sm">o haz clic en el botón para seleccionarlos</p>
+                  </div>
+                  <label className="mt-2 cursor-pointer bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm transition-all flex items-center gap-2">
+                    <ArrowUp className="w-4 h-4" />
+                    Explorar archivos
+                    <input 
+                      type="file" 
+                      accept="application/pdf" 
+                      multiple 
+                      className="hidden" 
+                      onChange={(e) => {
+                        if (e.target.files) handleAddFiles(Array.from(e.target.files));
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
                 </div>
               )}
             </ul>
@@ -379,33 +432,53 @@ export function MultiPdfUploadModal({
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-4 border-t border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm shrink-0 flex flex-row justify-end gap-3">
-          <Button 
-            variant="outline" 
-            onClick={onClose} 
-            disabled={isUploading}
-            className="border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleUpload} 
-            disabled={isUploading || !allProcessed || fileItems.length === 0}
-            className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Subiendo...
-              </>
-            ) : (
-              <>
-                {allProcessed ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Subir {fileItems.length} archivo{fileItems.length !== 1 ? 's' : ''}
-              </>
+        <DialogFooter className="p-6 pt-4 border-t border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm shrink-0 flex flex-row justify-between items-center gap-3">
+          <div>
+            {fileItems.length > 0 && (
+              <label className="cursor-pointer text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20">
+                <FileText className="w-4 h-4" />
+                Añadir más PDFs
+                <input 
+                  type="file" 
+                  accept="application/pdf" 
+                  multiple 
+                  className="hidden" 
+                  onChange={(e) => {
+                    if (e.target.files) handleAddFiles(Array.from(e.target.files));
+                    e.target.value = '';
+                  }}
+                />
+              </label>
             )}
-          </Button>
+          </div>
+          <div className="flex flex-row gap-3">
+            <Button 
+              variant="outline" 
+              onClick={onClose} 
+              disabled={isUploading}
+              className="border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleUpload} 
+              disabled={isUploading || !allProcessed || fileItems.length === 0}
+              className="bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  {allProcessed ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Subir {fileItems.length} archivo{fileItems.length !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

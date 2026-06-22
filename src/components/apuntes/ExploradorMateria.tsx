@@ -7,10 +7,12 @@ import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
 import { DialogoMover } from "@/components/apuntes/DialogoMover";
 import { MultiPdfUploadModal } from "@/components/apuntes/MultiPdfUploadModal";
-import { Loader2, RefreshCw, Plus, UploadCloud, BookOpen, ChevronRight, Search, Share, FileText } from "lucide-react";
+import { Loader2, RefreshCw, Plus, UploadCloud, BookOpen, ChevronRight, Search, Share, FileText, LayoutGrid, List as ListIcon, ArrowDownWideNarrow, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
+import { ShareDialog } from "@/components/ui/share-dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { TrackVisit } from "@/components/ui/TrackVisit";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { CacheUtils } from "@/lib/cache";
@@ -48,6 +50,9 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   const [searchQuery, setSearchQuery] = useState("");
   const [totalStats, setTotalStats] = useState({ pdfs: 0, cuadernos: 0 });
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'fecha' | 'nombre'>('fecha');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Redirect if initialFileId is provided
   useEffect(() => {
@@ -81,11 +86,23 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
       const params = new URLSearchParams(window.location.search);
       const folderId = params.get("folder");
       
+      const view = params.get('view') as 'grid' | 'list';
+      if (view === 'grid' || view === 'list') setViewMode(view);
+      else setViewMode('grid');
+
+      const sb = params.get('sortBy') as 'fecha' | 'nombre';
+      if (sb === 'fecha' || sb === 'nombre') setSortBy(sb);
+      else setSortBy('fecha');
+
+      const so = params.get('sortOrder') as 'asc' | 'desc';
+      if (so === 'asc' || so === 'desc') setSortOrder(so);
+      else setSortOrder('desc');
+
       if (!folderId) {
         setCurrentFolder(null);
         setBreadcrumbs([]);
       } else {
-        const targetFolder = allFoldersRef.current.find((f: any) => f.id === folderId);
+        const targetFolder = allFoldersRef.current.find((f: any) => f.id === folderId || f.slug === folderId);
         if (targetFolder) {
           const newBreadcrumbs: CarpetaApunte[] = [];
           let curr: any = targetFolder;
@@ -100,6 +117,10 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
         }
       }
     };
+    
+    // Init from URL on mount
+    handlePopState();
+    
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -246,14 +267,47 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
       CacheUtils.set(cacheKey, filesArr);
   };
 
-  const updateUrlFolder = (folderId: string | null) => {
+  const updateUrlParams = (updates: Record<string, string | null>) => {
     const newUrl = new URL(window.location.href);
-    if (folderId) {
-      newUrl.searchParams.set("folder", folderId);
-    } else {
-      newUrl.searchParams.delete("folder");
-    }
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) {
+        newUrl.searchParams.set(key, value);
+      } else {
+        newUrl.searchParams.delete(key);
+      }
+    });
     window.history.pushState({}, "", newUrl.toString());
+  };
+
+  const updateUrlFolder = (folderId: string | null) => {
+    if (!folderId) {
+      updateUrlParams({ folder: null });
+      return;
+    }
+    const folder = allFoldersRef.current.find((f: any) => f.id === folderId);
+    updateUrlParams({ folder: folder?.slug || folderId });
+  };
+
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    updateUrlParams({ view: mode });
+  };
+
+  const handleSortChange = (by: 'fecha' | 'nombre', order: 'asc' | 'desc') => {
+    setSortBy(by);
+    setSortOrder(order);
+    updateUrlParams({ sortBy: by, sortOrder: order });
+  };
+
+  const scrollToExplorer = () => {
+    // Scroll to the explorer section smoothly
+    const element = document.getElementById('explorer-toolbar');
+    if (element) {
+      const y = element.getBoundingClientRect().top + window.scrollY - 100; // 100px offset for any fixed header
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleNavigateBreadcrumb = (folder: CarpetaApunte | null) => {
@@ -267,6 +321,7 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
       setBreadcrumbs(breadcrumbs.slice(0, idx + 1));
       updateUrlFolder(folder.id);
     }
+    setTimeout(scrollToExplorer, 50);
   };
 
   const handleFolderClick = (folder: CarpetaApunte) => {
@@ -276,10 +331,11 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
       return [...prev, folder];
     });
     updateUrlFolder(folder.id);
+    setTimeout(scrollToExplorer, 50);
   };
 
   const handleFileClick = (file: ArchivoApunte) => {
-    router.push(`/apuntes/documento/${file.id}`);
+    router.push(`/apuntes/documento/${file.slug || file.id}`);
   };
 
   const handleCreateNotebook = async () => {
@@ -338,29 +394,35 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   const filteredFolders = folders.filter((f) => f.nombre.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredFiles = files.filter((f) => f.nombre.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    try {
-      if (typeof navigator.share !== 'undefined') {
-        await navigator.share({
-          title: `Apuntes de ${materia.nombre}`,
-          url: url
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-        alert("Enlace copiado al portapapeles");
-        setIsShareDialogOpen(false);
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const handleShareClick = () => {
+    setIsShareDialogOpen(true);
   };
+
+  const sortItems = (items: any[]) => {
+    return [...items].sort((a, b) => {
+      let valA, valB;
+      if (sortBy === 'nombre') {
+        valA = a.nombre.toLowerCase();
+        valB = b.nombre.toLowerCase();
+      } else {
+        valA = new Date(a.created_at || a.fechaCreacion || a.fecha_creacion || a.fechaSubida || a.fecha_subida || 0).getTime();
+        valB = new Date(b.created_at || b.fechaCreacion || b.fecha_creacion || b.fechaSubida || b.fecha_subida || 0).getTime();
+      }
+      
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const sortedFolders = sortItems(filteredFolders);
+  const sortedFiles = sortItems(filteredFiles);
 
   return (
     <div className="w-full">
       {/* Header Estilo Imagen 1 */}
       <section 
-        className="mb-10 animate-fade-in rounded-3xl p-6 md:p-8 -mx-4 md:mx-0 relative overflow-hidden"
+        className="mb-10 animate-fade-in rounded-none md:rounded-3xl p-6 md:p-8 -mx-4 md:mx-0 relative overflow-hidden"
         style={{ backgroundColor: materia.color || '#39b54a' }}
       >
         <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between relative z-10">
@@ -399,13 +461,7 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
             <Button disabled className="rounded-full px-6 bg-foreground text-background hover:bg-foreground/90 shadow-sm font-bold opacity-50 cursor-not-allowed">
               Próximamente
             </Button>
-            <Button variant="outline" className="rounded-full px-6 bg-white hover:bg-neutral-100 shadow-sm dark:bg-neutral-900 dark:hover:bg-neutral-800" onClick={() => {
-              if (typeof navigator.share !== 'undefined') {
-                handleShare();
-              } else {
-                setIsShareDialogOpen(true);
-              }
-            }}>
+            <Button variant="outline" className="rounded-full px-6 bg-white hover:bg-neutral-100 shadow-sm dark:bg-neutral-900 dark:hover:bg-neutral-800" onClick={handleShareClick}>
               <Share className="size-4 mr-2" /> Compartir
             </Button>
           </div>
@@ -422,36 +478,68 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
         </div>
       </section>
 
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <h2 className="text-xl font-bold">Documentos</h2>
+      <div id="explorer-toolbar" className="flex items-center justify-between mb-6 flex-wrap gap-4 scroll-mt-24">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold">Documentos</h2>
+          
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
+            <button 
+              onClick={() => handleViewModeChange('grid')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-neutral-900 shadow-sm text-primary' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+              title="Vista de cuadrícula"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => handleViewModeChange('list')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-neutral-900 shadow-sm text-primary' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+              title="Vista de lista"
+            >
+              <ListIcon className="w-4 h-4" />
+            </button>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-sm font-medium h-8 px-3 gap-2 text-neutral-600 dark:text-neutral-300 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer">
+              {sortBy === 'fecha' ? (sortOrder === 'desc' ? <ArrowDownWideNarrow className="w-4 h-4" /> : <ArrowUpNarrowWide className="w-4 h-4" />) : (sortOrder === 'desc' ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />)}
+              <span className="hidden sm:inline">Ordenar por</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuItem onClick={() => handleSortChange('fecha', 'desc')} className={sortBy === 'fecha' && sortOrder === 'desc' ? 'bg-primary/10 text-primary' : ''}>
+                Más recientes primero
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSortChange('fecha', 'asc')} className={sortBy === 'fecha' && sortOrder === 'asc' ? 'bg-primary/10 text-primary' : ''}>
+                Más antiguos primero
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSortChange('nombre', 'asc')} className={sortBy === 'nombre' && sortOrder === 'asc' ? 'bg-primary/10 text-primary' : ''}>
+                Nombre (A-Z)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSortChange('nombre', 'desc')} className={sortBy === 'nombre' && sortOrder === 'desc' ? 'bg-primary/10 text-primary' : ''}>
+                Nombre (Z-A)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         
         <div className="flex items-center gap-2">
           {currentFolder?.colaborativa && currentUser && (
             <>
               {currentFolder.tipo !== "cuaderno" && (
-                <label className="cursor-pointer bg-red-600 hover:bg-red-700 text-white h-9 px-4 rounded-lg flex items-center justify-center text-sm font-medium transition-colors">
+                <button 
+                  onClick={() => {
+                    setSelectedPdfFiles([]);
+                    setIsPdfUploadModalOpen(true);
+                  }}
+                  className="cursor-pointer bg-red-600 hover:bg-red-700 text-white h-9 px-4 rounded-lg flex items-center justify-center text-sm font-medium transition-colors"
+                >
                   <UploadCloud className="w-4 h-4 mr-2" /> Subir PDF
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setSelectedPdfFiles(Array.from(e.target.files));
-                        setIsPdfUploadModalOpen(true);
-                      }
-                      // reset input so the same files can be selected again if cancelled
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+                </button>
               )}
               {currentFolder.tipo === "cuaderno" && (
                 <Button onClick={() => {
                   setNewNotebookName(`Cuaderno de ${currentUser?.user_metadata?.full_name || "Alumno"}`);
                   setIsCreatingNotebook(true);
-                }} size="lg" className="bg-purple-600 hover:bg-purple-700 text-white">
+                }} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white h-9">
                   <Plus className="w-4 h-4 mr-2" /> Nuevo Cuaderno
                 </Button>
               )}
@@ -460,13 +548,13 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
 
           <Button 
             variant="outline" 
-            size="lg" 
+            size="sm" 
             onClick={fetchContents} 
             disabled={loading}
-            className="text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800"
+            className="h-9 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 px-2 sm:px-3"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Actualizar
+            <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Actualizar</span>
           </Button>
         </div>
       </div>
@@ -510,8 +598,9 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
               loading={loading}
               currentFolder={currentFolder}
               breadcrumbs={breadcrumbs}
-              folders={filteredFolders}
-              files={filteredFiles}
+              folders={sortedFolders}
+              files={sortedFiles}
+              viewMode={viewMode}
               onFolderClick={handleFolderClick}
               onFileClick={handleFileClick}
               onNavigateBreadcrumb={handleNavigateBreadcrumb}
@@ -628,28 +717,12 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
         }}
       />
 
-      {/* Dialog Share */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Compartir {materia.nombre}</DialogTitle>
-            <DialogDescription>
-              Copia el enlace a continuación para compartir esta materia con tus compañeros.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center space-x-2 mt-4">
-            <input
-              type="text"
-              readOnly
-              value={typeof window !== 'undefined' ? window.location.href : ''}
-              className="flex-1 px-3 py-2 border rounded-md text-sm bg-neutral-50 dark:bg-neutral-900"
-            />
-            <Button onClick={handleShare}>
-              Copiar Enlace
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ShareDialog 
+        isOpen={isShareDialogOpen} 
+        onOpenChange={setIsShareDialogOpen} 
+        title={`Compartir ${materia.nombre}`}
+        text={`Mira los apuntes de ${materia.nombre} en Most Cloud`}
+      />
 
       <MultiPdfUploadModal
         isOpen={isPdfUploadModalOpen}
