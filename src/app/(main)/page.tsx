@@ -6,7 +6,7 @@ import { MouseTooltip } from "@/components/ui/cursor-tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Cloud, BookOpen, Calendar, FileText, ChevronRight, Clock, Shield, ArrowRight } from "lucide-react";
+import { Cloud, BookOpen, Calendar, FileText, ChevronRight, Clock, Shield, ArrowRight, Search } from "lucide-react";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -148,10 +148,10 @@ export default async function HomePage() {
                   <span className="text-muted-foreground font-semibold text-3xl md:text-5xl tracking-tight">Directo de la comunidad.</span>
                 </h2>
               </div>
-              <ScrollLink href="/apuntes" className="group shrink-0">
-                <div className="flex items-center gap-4 rounded-full bg-primary/10 pl-6 pr-2 py-2 text-primary hover:bg-primary/20 transition-all duration-300">
+              <ScrollLink href="/apuntes" className="group shrink-0 w-full md:w-auto">
+                <div className="flex w-full items-center justify-between gap-4 rounded-full bg-primary/10 pl-6 pr-2 py-2 text-primary hover:bg-primary/20 transition-all duration-300 md:justify-start">
                   <span className="font-bold text-lg">Explorar archivo</span>
-                  <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground group-hover:rotate-45 transition-transform duration-300">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground group-hover:rotate-45 transition-transform duration-300">
                     <ArrowRight className="size-6" />
                   </div>
                 </div>
@@ -285,6 +285,87 @@ export default async function HomePage() {
                 </MouseTooltip>
               </ScrollReveal>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Aprender / Tutorial ──────────────────────── */}
+      <section className="relative w-full py-32 bg-muted/20 border-t border-border/40 overflow-hidden">
+        <div className="mx-auto w-full max-w-7xl px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <ScrollReveal direction="left" className="space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary mb-2">
+                <span className="flex size-2 rounded-full bg-primary animate-pulse"></span>
+                <span className="text-sm font-bold tracking-wide uppercase">Nueva Sección</span>
+              </div>
+              <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-foreground leading-[1.1]">
+                Aprende a dominar <br />
+                <span className="text-primary">La Nube.</span>
+              </h2>
+              <p className="text-xl text-muted-foreground font-medium leading-relaxed">
+                Descubre cómo encontrar los mejores apuntes, cómo colaborar correctamente subiendo material optimizado y por qué un buen perfil mejora tu reputación digital.
+              </p>
+              <ul className="space-y-4 pt-4">
+                <li className="flex items-center gap-3 text-lg font-medium">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <BookOpen className="size-4" />
+                  </div>
+                  Tutoriales interactivos
+                </li>
+                <li className="flex items-center gap-3 text-lg font-medium">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <FileText className="size-4" />
+                  </div>
+                  Guías de formatos permitidos
+                </li>
+              </ul>
+              <div className="pt-6">
+                <Link href="/aprender">
+                  <Button size="lg" className="rounded-full px-8 h-14 text-lg font-bold shadow-lg hover:shadow-primary/25 transition-all">
+                    Ir al Tutorial <ArrowRight className="ml-2 size-5" />
+                  </Button>
+                </Link>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" className="relative">
+              {/* Estilo decorativo abstracto */}
+              <div className="relative aspect-square md:aspect-[4/3] rounded-[2.5rem] bg-gradient-to-tr from-primary/20 via-background to-muted border border-border/50 shadow-2xl overflow-hidden flex items-center justify-center p-8 group">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+                
+                <div className="relative z-10 w-full max-w-sm space-y-4">
+                  <div className="bg-card border border-border shadow-lg p-4 rounded-2xl flex items-center gap-4 transform transition-transform group-hover:-translate-y-2 group-hover:rotate-2">
+                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                      <Search className="size-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">Explorar Contenido</h4>
+                      <p className="text-xs text-muted-foreground">Encuentra por materia</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-card border border-border shadow-lg p-4 rounded-2xl flex items-center gap-4 ml-8 transform transition-transform group-hover:translate-y-1 group-hover:-rotate-1 delay-75">
+                    <div className="p-3 bg-red-500/10 text-red-500 rounded-xl">
+                      <Cloud className="size-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">Subir Apuntes</h4>
+                      <p className="text-xs text-muted-foreground">PDFs y Cuadernos</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-card border border-border shadow-lg p-4 rounded-2xl flex items-center gap-4 transform transition-transform group-hover:translate-y-2 group-hover:rotate-2 delay-150">
+                    <div className="p-3 bg-green-500/10 text-green-500 rounded-xl">
+                      <Shield className="size-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">Comunidad</h4>
+                      <p className="text-xs text-muted-foreground">Reputación y SEO</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
