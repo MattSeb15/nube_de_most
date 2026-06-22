@@ -272,6 +272,7 @@ export async function getLatestArchivos(limit: number = 4): Promise<any[]> {
   }
   return data.map((a: any) => ({
     id: a.id,
+    slug: a.slug,
     nombre: a.nombre,
     tipo: a.tipo,
     materiaId: a.carpetas_apuntes?.materia_id,
@@ -655,7 +656,7 @@ export async function getArchivosByCreador(creadorId: string): Promise<any[]> {
   // 1. Get files directly created by the user
   const { data: archivosPropios, error: errorPropios } = await supabase
     .from("archivos_apuntes")
-    .select("*, carpetas_apuntes(materia_id), perfiles!creador_id(id, nombre_completo, apodo, rol)")
+    .select("*, slug, carpetas_apuntes(materia_id), perfiles!creador_id(id, nombre_completo, apodo, rol)")
     .eq("creador_id", creadorId);
 
   if (errorPropios) {
@@ -680,7 +681,7 @@ export async function getArchivosByCreador(creadorId: string): Promise<any[]> {
     if (uniqueCuadernoIds.length > 0) {
       const { data: dataColab, error: errorColab } = await supabase
         .from("archivos_apuntes")
-        .select("*, carpetas_apuntes(materia_id), perfiles!creador_id(id, nombre_completo, apodo, rol)")
+        .select("*, slug, carpetas_apuntes(materia_id), perfiles!creador_id(id, nombre_completo, apodo, rol)")
         .in("id", uniqueCuadernoIds);
         
       if (dataColab) {
@@ -698,6 +699,7 @@ export async function getArchivosByCreador(creadorId: string): Promise<any[]> {
 
   return allData.map((a: any) => ({
     id: a.id,
+    slug: a.slug,
     nombre: a.nombre,
     tipo: a.tipo,
     materiaId: a.carpetas_apuntes?.materia_id || (Array.isArray(a.carpetas_apuntes) ? a.carpetas_apuntes[0]?.materia_id : null),
