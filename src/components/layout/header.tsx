@@ -23,9 +23,17 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-const navLinks = [
+interface NavLink {
+  href: string;
+  label: string;
+  isNew?: boolean;
+  disabled?: boolean;
+}
+
+const navLinks: NavLink[] = [
   { href: "/apuntes", label: "Explorar" },
-  { href: "/actividades", label: "Actividades", disabled: true },
+  { href: "/aprender", label: "Aprender", isNew: true },
+  // { href: "/actividades", label: "Actividades", disabled: true },
   { href: "/sobre-mi", label: "Acerca de" },
 ];
 
@@ -218,13 +226,18 @@ export function Header() {
                 href={link.href}
                 onClick={() => window.scrollTo(0, 0)}
                 className={cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition-all",
+                  "relative rounded-full px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5",
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
               >
                 {link.label}
+                {link.isNew && (
+                  <span className="text-[9px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full shadow-sm font-black uppercase tracking-wider">
+                    NEW
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -378,11 +391,16 @@ export function Header() {
                       href={link.href}
                       onClick={() => { setMobileOpen(false); window.scrollTo(0, 0); }}
                       className={cn(
-                        "rounded-xl px-4 py-3 text-sm font-medium transition-colors",
+                        "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-colors",
                         isActive ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
                       )}
                     >
-                      {link.label}
+                      <span>{link.label}</span>
+                      {link.isNew && (
+                        <span className="text-[9px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full shadow-sm font-black uppercase tracking-wider">
+                          NEW
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
