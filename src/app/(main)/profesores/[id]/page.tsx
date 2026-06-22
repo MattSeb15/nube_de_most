@@ -26,9 +26,26 @@ export async function generateMetadata({
   const { id } = await params;
   const profesor = await getProfesorById(id);
   if (!profesor) return { title: "Profesor no encontrado" };
+  
+  const title = `Prof. ${profesor.nombre} — La Nube de Most`;
+  const description = `Materias impartidas por el Prof. ${profesor.nombre}`;
+  const url = `/profesores/${id}`;
+
   return {
-    title: `Prof. ${profesor.nombre} — La Nube de Most`,
-    description: `Materias impartidas por el Prof. ${profesor.nombre}`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "profile",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 
