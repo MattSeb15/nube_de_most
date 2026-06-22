@@ -10,6 +10,7 @@ import { MateriaIcon } from "@/components/ui/materia-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/server";
+import { PaginatedArchivos } from "@/components/apuntes/PaginatedArchivos";
 
 // Custom Social Icons
 function GithubIcon({ className }: { className?: string }) {
@@ -66,9 +67,27 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
   const perfil = await getPerfilByUsername(username);
   if (!perfil) return { title: "Perfil no encontrado | La Nube de Most" };
 
+  const title = `${perfil.nombreCompleto || perfil.apodo} | Perfil en La Nube de Most`;
+  const description = perfil.bio || `Perfil académico de ${perfil.nombreCompleto || perfil.apodo} en La Nube de Most.`;
+  const url = `/perfil/${username}`;
+
   return {
-    title: `${perfil.nombreCompleto || perfil.apodo} | La Nube de Most`,
-    description: perfil.bio || `Perfil académico de ${perfil.nombreCompleto || perfil.apodo} en La Nube de Most.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "profile",
+      images: perfil.avatar_url ? [{ url: perfil.avatar_url, width: 256, height: 256, alt: title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: perfil.avatar_url ? [perfil.avatar_url] : [],
+    },
   };
 }
 
@@ -89,7 +108,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const archivosWithMaterias = await Promise.all(
     archivos.map(async (archivo) => {
       const materia = await getMateriaById(archivo.materiaId);
-      return { ...archivo, materia };
+      return { ...archivo, materia, colaborativa: archivo.esColaboracion };
     })
   );
 
@@ -107,7 +126,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       .select(`
         archivo_id,
         archivos_apuntes (
-          id, nombre, tipo, fecha_subida, url_archivo,
+          id, nombre, tipo, fecha_subida, url_archivo, vistas, creador_id,
+          perfiles!creador_id(id, nombre_completo, apodo, rol),
           carpetas_apuntes(materia_id)
         )
       `)
@@ -124,7 +144,13 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             nombre: a.nombre,
             tipo: a.tipo,
             materiaId: mId,
-            fechaSubida: a.fecha_subida || a.fecha_creacion,
+            fechaSubida: a.fecha_subida || a.fecha_creacion || new Date().toISOString(),
+            urlArchivo: a.url_archivo || "",
+            creador: a.perfiles ? (a.perfiles.apodo || a.perfiles.nombre_completo) : "Anónimo",
+            creadorId: a.perfiles?.id || a.creador_id || "",
+            creadorApodo: a.perfiles?.apodo || null,
+            creadorRol: a.perfiles?.rol || "usuario",
+            vistasCount: a.vistas || 0,
             materia
           };
         })
@@ -272,44 +298,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               </h2>
             </div>
             
-            <div className="grid gap-4 sm:grid-cols-2">
-              {aportesPropios.map((archivo) => {
-                const materia = archivo.materia;
-                const materiaSlug = materia?.slug ?? "desconocida";
-                
-                return (
-                  <Link 
-                    key={archivo.id}
-                    href={`/apuntes/documento/${archivo.id}`}
-                    className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                        {archivo.nombre}
-                      </h3>
-                    </div>
-                    
-                    <div className="mt-auto flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2">
-                        {materia && (
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold text-white tracking-wide" style={{ backgroundColor: materia.color }}>
-                             <MateriaIcon name={materia.icono} className="size-3" style={{ fill: 'currentColor' }} />
-                             {materia.nombre.toUpperCase()}
-                           </div>
-                        )}
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold bg-muted text-muted-foreground border-0 uppercase tracking-wider">
-                          {archivo.tipo}
-                        </Badge>
-                      </div>
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-                        <Clock className="size-3" />
-                        {formatFecha(archivo.fechaSubida)}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <PaginatedArchivos archivos={aportesPropios} emptyMessage="No hay archivos subidos" itemsPerPage={6} />
           </section>
         )}
 
@@ -323,44 +312,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               </h2>
             </div>
             
-            <div className="grid gap-4 sm:grid-cols-2">
-              {colaboraciones.map((archivo) => {
-                const materia = archivo.materia;
-                const materiaSlug = materia?.slug ?? "desconocida";
-                
-                return (
-                  <Link 
-                    key={archivo.id}
-                    href={`/apuntes/documento/${archivo.id}`}
-                    className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                        {archivo.nombre}
-                      </h3>
-                    </div>
-                    
-                    <div className="mt-auto flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2">
-                        {materia && (
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold text-white tracking-wide" style={{ backgroundColor: materia.color }}>
-                             <MateriaIcon name={materia.icono} className="size-3" style={{ fill: 'currentColor' }} />
-                             {materia.nombre.toUpperCase()}
-                           </div>
-                        )}
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold bg-muted text-muted-foreground border-0 uppercase tracking-wider">
-                          COLAB
-                        </Badge>
-                      </div>
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-                        <Clock className="size-3" />
-                        {formatFecha(archivo.fechaSubida)}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <PaginatedArchivos archivos={colaboraciones} emptyMessage="No hay colaboraciones" itemsPerPage={6} />
           </section>
         )}
 
@@ -374,44 +326,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               </h2>
             </div>
             
-            <div className="grid gap-4 sm:grid-cols-2">
-              {archivosGuardados.map((archivo) => {
-                const materia = archivo.materia;
-                const materiaSlug = materia?.slug ?? "desconocida";
-                
-                return (
-                  <Link 
-                    key={archivo.id}
-                    href={`/apuntes/documento/${archivo.id}`}
-                    className="group flex flex-col p-5 rounded-2xl border border-border/40 bg-background hover:bg-muted/30 transition-all hover:-translate-y-1 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                        {archivo.nombre}
-                      </h3>
-                    </div>
-                    
-                    <div className="mt-auto flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2">
-                        {materia && (
-                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold text-white tracking-wide" style={{ backgroundColor: materia.color }}>
-                             <MateriaIcon name={materia.icono} className="size-3" style={{ fill: 'currentColor' }} />
-                             {materia.nombre.toUpperCase()}
-                           </div>
-                        )}
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold bg-muted text-muted-foreground border-0 uppercase tracking-wider">
-                          GUARDADO
-                        </Badge>
-                      </div>
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-                        <Clock className="size-3" />
-                        {formatFecha(archivo.fechaSubida)}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <PaginatedArchivos archivos={archivosGuardados} emptyMessage="No hay apuntes guardados" itemsPerPage={6} />
           </section>
         )}
 
