@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { Metadata, ResolvingMetadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -25,9 +25,10 @@ interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: PageProps,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
   const { semestre: semestreSlug, materia: materiaSlug } = await params;
   const semestre = await getSemestreBySlug(semestreSlug);
   const materia = await getMateriaBySlug(materiaSlug);
@@ -35,6 +36,9 @@ export async function generateMetadata({
   const title = `${materia.nombre} — ${semestre.nombre}`;
   const description = materia.descripcion || `Apuntes y recursos de ${materia.nombre} para el ${semestre.nombre}.`;
   const url = `/apuntes/${semestreSlug}/${materiaSlug}`;
+  
+  const previousImages = (await parent).openGraph?.images || [];
+  
   return {
     title,
     description,
@@ -43,6 +47,7 @@ export async function generateMetadata({
       title,
       description,
       url,
+      images: previousImages,
     },
   };
 }
