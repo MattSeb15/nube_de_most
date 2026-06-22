@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MouseTooltip } from "@/components/ui/cursor-tooltip";
-import { Cloud, FileText, BookOpen } from "lucide-react";
+import { Cloud, FileText, BookOpen, ArrowRight } from "lucide-react";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { MateriaCard } from "@/components/apuntes/MateriaCard";
 import { ArchivoCard } from "@/components/apuntes/ArchivoCard";
@@ -256,9 +256,30 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
       <div className="relative z-10 flex flex-col items-center text-center px-4 mt-8 md:mt-0 w-full max-w-4xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
+          animate={{ 
+            opacity: 1, 
+            y: [0, -8, 0] 
+          }}
+          transition={{ 
+            opacity: { duration: 0.8, delay: 0.05 },
+            y: { duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.8 }
+          }}
+          className="mb-6"
+        >
+          <Link href="/aprender">
+            <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-full bg-primary/5 backdrop-blur-md border border-primary/20 text-foreground hover:bg-primary/10 transition-all cursor-pointer shadow-sm group">
+              <span className="bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">New</span>
+              <span className="text-sm font-medium text-primary">Aprende a dominar la plataforma</span>
+              <ArrowRight className="size-4 text-primary group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1 }}
-          className="mb-8"
+          className="mb-8 flex flex-col items-center"
         >
           <h1 className="text-6xl sm:text-7xl md:text-[6rem] lg:text-[7rem] font-extrabold tracking-tighter text-foreground leading-[1.1]">
             La Nube de Most
