@@ -126,7 +126,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       .select(`
         archivo_id,
         archivos_apuntes (
-          id, nombre, tipo, fecha_subida, url_archivo, vistas, creador_id,
+          id, slug, nombre, tipo, fecha_subida, url_archivo, vistas, creador_id,
           perfiles!creador_id(id, nombre_completo, apodo, rol),
           carpetas_apuntes(materia_id)
         )
@@ -141,6 +141,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           const materia = mId ? await getMateriaById(mId) : null;
           return {
             id: a.id,
+            slug: a.slug,
             nombre: a.nombre,
             tipo: a.tipo,
             materiaId: mId,
