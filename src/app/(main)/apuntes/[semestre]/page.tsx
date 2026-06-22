@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 import { getSemestreBySlug, getMateriasBySemestre } from "@/lib/academic";
 import { MateriaCard } from "@/components/apuntes/MateriaCard";
+import { FloatingBreadcrumbs } from "@/components/ui/floating-breadcrumbs";
 
 interface PageProps {
   params: Promise<{ semestre: string }>;

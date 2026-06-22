@@ -57,6 +57,7 @@ function formatDate(dateString: string): string {
 
 import { ExploradorMateria } from "@/components/apuntes/ExploradorMateria";
 import { TrackVisit } from "@/components/ui/TrackVisit";
+import { FloatingBreadcrumbs } from "@/components/ui/floating-breadcrumbs";
 
 export default async function MateriaPage({ params, searchParams }: PageProps) {
   const { semestre: semestreSlug, materia: materiaSlug } = await params;
