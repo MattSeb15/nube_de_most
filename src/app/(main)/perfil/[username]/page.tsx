@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, ResolvingMetadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPerfilByUsername, getArchivosByCreador, getMateriaById } from "@/lib/academic";
@@ -62,7 +62,10 @@ function formatFecha(iso: string) {
   });
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: { params: Promise<{ username: string }> },
+  parent: ResolvingMetadata
+): Promise<Metadata> {
   const { username } = await params;
   const perfil = await getPerfilByUsername(username);
   if (!perfil) return { title: "Perfil no encontrado | La Nube de Most" };
@@ -70,6 +73,8 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
   const title = `${perfil.nombreCompleto || perfil.apodo} | Perfil en La Nube de Most`;
   const description = perfil.bio || `Perfil académico de ${perfil.nombreCompleto || perfil.apodo} en La Nube de Most.`;
   const url = `/perfil/${username}`;
+
+  const previousImages = (await parent).openGraph?.images || [];
 
   return {
     title,
@@ -80,13 +85,13 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
       description,
       url,
       type: "profile",
-      images: perfil.avatar_url ? [{ url: perfil.avatar_url, width: 256, height: 256, alt: title }] : [],
+      images: perfil.avatar_url ? [{ url: perfil.avatar_url, width: 256, height: 256, alt: title }] : previousImages,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: perfil.avatar_url ? [perfil.avatar_url] : [],
+      ...(perfil.avatar_url ? { images: [perfil.avatar_url] } : {}),
     },
   };
 }
