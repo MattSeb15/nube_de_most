@@ -144,6 +144,7 @@ export interface PerfilUsuario {
 
 export interface CarpetaApunte {
   id: string;
+  slug?: string;
   nombre: string;
   descripcion: string;
   materiaId: string;
@@ -157,6 +158,7 @@ export interface CarpetaApunte {
 
 export interface ArchivoApunte {
   id: string;
+  slug?: string;
   carpetaId: string;
   tipo: "pdf" | "cuaderno";
   nombre: string;
@@ -176,6 +178,20 @@ export interface PaginaCuaderno {
   orden: number;
   creadorId: string;
   oculta?: boolean;
+  etiqueta?: string;
+  etiqueta_grupo?: string;
+  etiqueta_color?: string;
+  // Propiedades para renderizado local
+  perfiles?: {
+    id: string;
+    nombre_completo: string;
+    avatar_url: string;
+    apodo?: string;
+  };
+  creador_id?: string;
+  created_at?: string;
+  fecha_creacion?: string;
+  fecha_subida?: string;
 }
 
 export interface ColaboradorCarpeta {
