@@ -7,7 +7,10 @@ import { type ThemeProviderProps } from "next-themes";
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   const orig = console.error;
   console.error = (...args: any[]) => {
-    if (typeof args[0] === "string" && args[0].includes("Encountered a script tag while rendering React component")) {
+    if (typeof args[0] === "string" && (
+      args[0].includes("Encountered a script tag while rendering React component") ||
+      args[0].includes("--scale-factor")
+    )) {
       return;
     }
     orig.apply(console, args);
