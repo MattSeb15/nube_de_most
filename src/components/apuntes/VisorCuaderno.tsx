@@ -171,18 +171,18 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
 
     return (
       <div 
-        className={`absolute -top-12 ${isRightPage ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left'} z-20 pointer-events-auto transition-all duration-300 ${zoomLevel !== 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'} flex flex-row gap-2 ${isRightPage ? 'justify-end' : 'justify-start'}`}
+        className={`absolute bottom-full mb-1.5 sm:mb-2 ${isRightPage ? 'right-0 origin-bottom-right items-end' : 'left-0 origin-bottom-left items-start'} z-20 pointer-events-auto transition-all duration-300 ${zoomLevel !== 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'} flex flex-col sm:flex-row gap-1.5 sm:gap-2 ${isRightPage ? 'sm:justify-end' : 'sm:justify-start'}`}
         style={{ transform: `scale(${1 / zoomLevel})` }}
       >
         {page.etiqueta && (
           <div 
             style={{ backgroundColor: `${getEtiquetaHexColor(page.etiqueta_color)}e6` }}
-            className="backdrop-blur-md rounded-full text-white px-3 py-1.5 flex items-center gap-1.5 shadow-md border border-white/20"
+            className="backdrop-blur-md rounded-full text-white px-3 py-1.5 flex items-center gap-1.5 shadow-md border border-white/20 max-w-full"
           >
-            <Tag className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">{page.etiqueta}</span>
+            <Tag className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-xs font-semibold truncate max-w-[100px] sm:max-w-[200px]">{page.etiqueta}</span>
             {page.etiqueta_grupo && (
-              <span className="text-[9px] font-bold uppercase opacity-80 tracking-wider shrink-0 bg-black/25 px-1.5 py-0.5 rounded ml-1">
+              <span className="text-[9px] font-bold uppercase opacity-80 tracking-wider shrink-0 bg-black/25 px-1.5 py-0.5 rounded ml-0.5 sm:ml-1">
                 {page.etiqueta_grupo}
               </span>
             )}
@@ -190,22 +190,22 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
         )}
         <Link 
           href={profileUrl}
-          className={`backdrop-blur-md rounded-full text-white px-2.5 py-1.5 flex items-center gap-2 shadow-md border transition-all hover:scale-105 ${bgColor}`}
+          className={`backdrop-blur-md rounded-full text-white px-2 sm:px-2.5 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-md border transition-all hover:scale-105 max-w-full ${bgColor}`}
           onClick={(e) => e.stopPropagation()}
         >
         {page.perfiles.avatar_url ? (
-          <img src={page.perfiles.avatar_url} className="w-5 h-5 rounded-full object-cover shadow-sm border border-white/20" alt="Avatar" />
+          <img src={page.perfiles.avatar_url} className="w-5 h-5 sm:w-5 sm:h-5 rounded-full object-cover shadow-sm border border-white/20 shrink-0" alt="Avatar" />
         ) : (
-          <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold shadow-sm">
+          <div className="w-5 h-5 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold shadow-sm shrink-0">
             {page.perfiles.nombre_completo?.[0] || 'U'}
           </div>
         )}
-        <div className="flex flex-col items-start leading-none">
-          <span className="text-[11px] sm:text-xs truncate max-w-[120px] sm:max-w-[200px] font-medium opacity-90">
+        <div className="flex flex-col items-start leading-none min-w-0">
+          <span className="text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[200px] font-medium opacity-90">
             {isCurrentUser ? "Tú" : page.perfiles.nombre_completo}
           </span>
           {formattedDate && (
-            <span className="text-[8px] sm:text-[9px] opacity-70 font-normal mt-0.5">
+            <span className="text-[8px] sm:text-[9px] opacity-70 font-normal mt-0.5 whitespace-nowrap">
               {formattedDate}
             </span>
           )}
