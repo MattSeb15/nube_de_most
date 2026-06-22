@@ -17,6 +17,10 @@ import { createClient } from "@/utils/supabase/client";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { MoreVertical, Edit2, Trash2, MoveRight } from "lucide-react";
+import { DialogoMover } from "@/components/apuntes/DialogoMover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 export default function DocumentViewClient({ 
   file, 
   currentUser,
@@ -45,6 +49,67 @@ export default function DocumentViewClient({
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const supabase = createClient();  
+
+  // States for 3-dots actions
+  const [fileNombre, setFileNombre] = useState(file.nombre);
+  const [isCollaborative, setIsCollaborative] = useState(file.colaborativa);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [isMoving, setIsMoving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingActions, setIsSavingActions] = useState(false);
+
+  useEffect(() => {
+    setFileNombre(file.nombre);
+    setIsCollaborative(file.colaborativa);
+  }, [file.nombre, file.colaborativa]);
+
+  const isOwner = file.creador_id === currentUser?.id;
+  const isAdmin = currentUser?.rol === "admin";
+  const canEdit = isAdmin || isOwner;
+
+  const hasOtherCollaborators = collaborators.some((c: any) => c.id !== file.creador_id);
+  const disabledTooltip = hasOtherCollaborators ? "Primero los colaboradores deben eliminar sus aportes" : undefined;
+
+  const handleRenameSubmit = async () => {
+    if (!renameValue.trim() || isSavingActions) return;
+    setIsSavingActions(true);
+    const { error } = await supabase.from("archivos_apuntes").update({ nombre: renameValue }).eq("id", file.id);
+    if (!error) {
+      setFileNombre(renameValue);
+      setIsRenaming(false);
+      router.refresh();
+    }
+    setIsSavingActions(false);
+  };
+
+  const handleToggleCollaborative = async () => {
+    if (isSavingActions) return;
+    setIsSavingActions(true);
+    const { error } = await supabase.from("archivos_apuntes").update({ colaborativa: !isCollaborative }).eq("id", file.id);
+    if (!error) {
+      setIsCollaborative(!isCollaborative);
+      router.refresh();
+    }
+    setIsSavingActions(false);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (isSavingActions) return;
+    setIsSavingActions(true);
+    const { error } = await supabase.from("archivos_apuntes").delete().eq("id", file.id);
+    if (!error) {
+      const materia = file.carpetas_apuntes?.materias;
+      if (materia) {
+        router.push(`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`);
+      } else {
+        router.push("/apuntes");
+      }
+    } else {
+      setIsSavingActions(false);
+    }
+  };
+
   const handleLike = async () => {
     if (!currentUser) return;
     if (isPending) return;
@@ -330,6 +395,42 @@ export default function DocumentViewClient({
     }
   };
 
+  const renderMoreOptions = (mobileClass?: string) => {
+    if (!canEdit) return null;
+    return (
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger className={cn("inline-flex items-center justify-center rounded-full w-8 h-8 p-0 shrink-0 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors", isSpecialBg ? "text-white hover:bg-white/20 hover:text-white" : "text-foreground", mobileClass)}>
+          <MoreVertical className="w-4 h-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => { setRenameValue(fileNombre); setIsRenaming(true); }}>
+            <Edit2 className="w-4 h-4 mr-2" /> Renombrar
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setIsMoving(true)}>
+            <MoveRight className="w-4 h-4 mr-2" /> Mover
+          </DropdownMenuItem>
+          {isCuaderno && (
+            <DropdownMenuItem 
+              onClick={handleToggleCollaborative}
+              disabled={hasOtherCollaborators}
+              title={disabledTooltip}
+            >
+              <Users className="w-4 h-4 mr-2" /> {isCollaborative ? "Quitar Colaborativo" : "Hacer Colaborativo"}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem 
+            className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30" 
+            onClick={() => setIsDeleting(true)}
+            disabled={hasOtherCollaborators}
+            title={disabledTooltip}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   return (
     <main className="bg-background min-h-screen">
       {/* Floating Mini Header */}
@@ -339,47 +440,56 @@ export default function DocumentViewClient({
           isScrolled ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
         )}
       >
-        <div className={cn("backdrop-blur-md border shadow-md rounded-2xl p-2 sm:p-3 flex items-center justify-between gap-2 sm:gap-4 pointer-events-auto", floatingBg)}>
-          <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
+        <div className={cn("backdrop-blur-md border shadow-md rounded-2xl p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 pointer-events-auto", floatingBg)}>
+          <div className="w-full sm:flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
             <Button onClick={() => router.back()} variant="ghost" size="icon" className={cn("shrink-0 rounded-full h-8 w-8 sm:h-9 sm:w-9", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <div className={cn("hidden sm:flex h-8 w-8 rounded-full items-center justify-center shrink-0", iconBg)}>
                <FileText className="w-4 h-4" />
             </div>
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 w-full">
               <h2 className="text-sm sm:text-base font-bold truncate leading-tight">
-                {file.nombre}
+                {fileNombre}
               </h2>
-              <div className={cn("flex items-center gap-2 text-[10px] sm:text-xs mt-0.5", textMuted)}>
+              <div className={cn("flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs mt-0.5 min-w-0 w-full overflow-hidden", textMuted)}>
                 {materia && (
-                  <Link href={`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className="truncate font-medium hover:text-white hover:underline transition-colors">
+                  <Link href={`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className="truncate font-medium hover:text-white hover:underline transition-colors shrink min-w-0">
                     {materia.nombre}
                   </Link>
                 )}
-                <span className="hidden sm:inline">•</span>
-                <Link href={`/perfil/${file.perfiles?.apodo || file.perfiles?.id || file.creador_id}`} className="hidden sm:flex items-center gap-1.5 hover:text-white hover:underline transition-colors group">
+                
+                {materia && <span className="hidden sm:inline shrink-0">•</span>}
+                
+                <Link href={`/perfil/${file.perfiles?.apodo || file.perfiles?.id || file.creador_id}`} className="hidden sm:flex items-center gap-1.5 hover:text-white hover:underline transition-colors group shrink min-w-0">
                   {file.perfiles?.avatar_url && (
-                    <img src={file.perfiles.avatar_url} alt={file.perfiles.nombre_completo} className="w-4 h-4 rounded-full object-cover group-hover:ring-1 group-hover:ring-white transition-all" />
+                    <img src={file.perfiles.avatar_url} alt={file.perfiles.nombre_completo} className="w-4 h-4 rounded-full object-cover group-hover:ring-1 group-hover:ring-white transition-all shrink-0" />
                   )}
-                  <span className="truncate">{file.perfiles?.nombre_completo || "Usuario anónimo"}</span>
+                  <span className="truncate shrink min-w-0">{file.perfiles?.nombre_completo || "Usuario anónimo"}</span>
                 </Link>
-                <span className="hidden sm:inline">•</span>
-                <span className="font-medium capitalize truncate hidden sm:inline">
+                
+                <span className="hidden sm:inline shrink-0">•</span>
+                
+                <span className="font-medium capitalize shrink-0 hidden sm:inline">
                   {dateStr ? format(new Date(dateStr), "d MMM yyyy, HH:mm", { locale: es }) : "2024"}
                 </span>
-                <span className="font-medium capitalize truncate sm:hidden">
+                <span className="font-medium capitalize shrink-0 sm:hidden">
                   {dateStr ? format(new Date(dateStr), "d MMM, HH:mm", { locale: es }) : "2024"}
                 </span>
-                <span className="hidden sm:inline">•</span>
-                <span className="flex items-center gap-1 font-medium" title={`${file.vistas || 0} vistas`}>
+                
+                <span className="hidden sm:inline shrink-0">•</span>
+                
+                <span className="flex items-center gap-1 font-medium shrink-0" title={`${file.vistas || 0} vistas`}>
                   <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   <span>{file.vistas || 0}</span>
                 </span>
               </div>
             </div>
+            <div className="sm:hidden shrink-0 ml-1">
+              {renderMoreOptions()}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="w-full sm:w-auto flex items-center justify-start sm:justify-end gap-1.5 sm:gap-2 shrink-0 mt-1 sm:mt-0">
             {/* Ocultamos los botones de like/dislike solo en pantallas ultra pequeñas (< 350px) usando max-[350px]:hidden */}
             <div className={cn("flex max-[350px]:hidden items-center rounded-full sm:mr-1 h-8", likeBtnBg)}>
               <Button onClick={handleLike} variant="ghost" size="sm" className={cn("rounded-l-full px-2 h-full transition-colors", interaction === 'like' ? (isPdf ? "bg-white/30 text-white" : "bg-green-100 text-green-700") : likeBtnGhost)}>
@@ -390,15 +500,16 @@ export default function DocumentViewClient({
                 <ThumbsDown className={cn("w-3.5 h-3.5", interaction === 'dislike' && "fill-current")} /> {dislikes > 0 && <span className="ml-1 sm:ml-1.5 text-xs">{dislikes}</span>}
               </Button>
             </div>
-            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("hidden md:flex rounded-full h-8 px-3 transition-colors", savedBtnClass)}>
-              <Bookmark className={cn("w-3.5 h-3.5 mr-1.5", isSaved && "fill-current")} /> <span className="text-xs">{isSaved ? "Guardado" : "Guardar"}</span>
+            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("flex rounded-full h-8 px-2 lg:px-3 transition-colors", savedBtnClass)}>
+              <Bookmark className={cn("w-3.5 h-3.5 lg:mr-1.5", isSaved && "fill-current")} /> <span className="text-xs hidden lg:inline">{isSaved ? "Guardado" : "Guardar"}</span>
             </Button>
-            <Button onClick={() => setIsShareDialogOpen(true)} variant="ghost" size="sm" className={cn("hidden md:flex rounded-full h-8 px-3 transition-colors", savedBtnClass)}>
-              <Share className="w-3.5 h-3.5 mr-1.5" /> <span className="text-xs">Compartir</span>
+            <Button onClick={() => setIsShareDialogOpen(true)} variant="ghost" size="sm" className={cn("flex rounded-full h-8 px-2 lg:px-3 transition-colors", savedBtnClass)}>
+              <Share className="w-3.5 h-3.5 lg:mr-1.5" /> <span className="text-xs hidden lg:inline">Compartir</span>
             </Button>
             <Button onClick={handleDownload} size="sm" className={cn("bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-sm px-2.5 sm:px-4 h-8 text-xs", isSpecialBg && "shadow-none border border-green-500")}>
               <Download className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Descargar</span>
             </Button>
+            {renderMoreOptions("hidden sm:inline-flex ml-1 sm:ml-0")}
           </div>
         </div>
       </div>
@@ -412,7 +523,7 @@ export default function DocumentViewClient({
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight truncate">
-                {file.nombre}
+                {fileNombre}
               </h1>
             </div>
             <div className={cn("flex flex-col gap-2.5 mt-1 text-xs sm:text-sm pl-1", textMuted)}>
@@ -476,9 +587,41 @@ export default function DocumentViewClient({
               </div>
             </div>
           </div>
+          {canEdit && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className={cn("inline-flex items-center justify-center rounded-full h-9 w-9 shrink-0 hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors", isSpecialBg ? "text-white hover:bg-white/20 hover:text-white" : "text-foreground")}>
+                <MoreVertical className="w-5 h-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => { setRenameValue(fileNombre); setIsRenaming(true); }}>
+                  <Edit2 className="w-4 h-4 mr-2" /> Renombrar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsMoving(true)}>
+                  <MoveRight className="w-4 h-4 mr-2" /> Mover
+                </DropdownMenuItem>
+                {isCuaderno && (
+                  <DropdownMenuItem 
+                    onClick={handleToggleCollaborative}
+                    disabled={hasOtherCollaborators}
+                    title={disabledTooltip}
+                  >
+                    <Users className="w-4 h-4 mr-2" /> {isCollaborative ? "Quitar Colaborativo" : "Hacer Colaborativo"}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem 
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30" 
+                  onClick={() => setIsDeleting(true)}
+                  disabled={hasOtherCollaborators}
+                  title={disabledTooltip}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
         {/* Action Bar */}
-        <div className="flex items-center justify-between overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-1">
           <Button 
             onClick={isPdf || isCuaderno ? handleDownload : undefined}
             disabled={!isPdf && !isCuaderno}
@@ -493,8 +636,8 @@ export default function DocumentViewClient({
             {isPdf || isCuaderno ? "Descargar" : "Descargar"}
           </Button>
 
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <div className={cn("flex items-center rounded-full mr-2", likeBtnBg)}>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className={cn("flex items-center rounded-full", likeBtnBg)}>
               <Button onClick={handleLike} variant="ghost" size="sm" className={cn("rounded-l-full px-3 transition-colors", interaction === 'like' ? (isPdf ? "bg-white/30 text-white" : "bg-green-100 text-green-700") : likeBtnGhost)}>
                 <ThumbsUp className={cn("w-4 h-4 mr-1.5", interaction === 'like' && "fill-current")} /> {likes}
               </Button>
@@ -503,10 +646,10 @@ export default function DocumentViewClient({
                 <ThumbsDown className={cn("w-4 h-4 mr-1.5", interaction === 'dislike' && "fill-current")} /> {dislikes}
               </Button>
             </div>
-            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", savedBtnClass)}>
+            <Button onClick={handleSave} variant="ghost" size="sm" className={cn("rounded-full flex transition-colors", savedBtnClass)}>
               <Bookmark className={cn("w-4 h-4 mr-2", isSaved && "fill-current")} /> {isSaved ? "Guardado" : "Guardar"}
             </Button>
-            <Button onClick={() => setIsShareDialogOpen(true)} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", savedBtnClass)}>
+            <Button onClick={() => setIsShareDialogOpen(true)} variant="ghost" size="sm" className={cn("rounded-full flex transition-colors", savedBtnClass)}>
               <Share className="w-4 h-4 mr-2" /> Compartir
             </Button>
           </div>
@@ -547,8 +690,75 @@ export default function DocumentViewClient({
       <ShareDialog 
         isOpen={isShareDialogOpen} 
         onOpenChange={setIsShareDialogOpen} 
-        title={`Compartir ${file.nombre}`}
+        title={`Compartir ${fileNombre}`}
         text={`Mira este ${isCuaderno ? 'cuaderno' : 'documento'} en Most Cloud`}
+      />
+
+      <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renombrar {isCuaderno ? 'cuaderno' : 'documento'}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Nuevo nombre..."
+              className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-md px-4 py-2 text-neutral-900 dark:text-white focus:outline-none focus:border-purple-500"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleRenameSubmit();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenaming(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleRenameSubmit} className="bg-purple-600 hover:bg-purple-700 text-white" disabled={isSavingActions}>
+              {isSavingActions ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleting} onOpenChange={setIsDeleting}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar {isCuaderno ? 'cuaderno' : 'documento'}</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que quieres eliminar <strong>{fileNombre}</strong> de forma permanente? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleting(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isSavingActions}>
+              {isSavingActions ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <DialogoMover
+        isOpen={isMoving}
+        onClose={() => setIsMoving(false)}
+        itemToMove={{ type: 'file', item: file }}
+        onConfirm={async (newMateriaId, newFolderId) => {
+          setIsMoving(false);
+          if (isSavingActions) return;
+          setIsSavingActions(true);
+          const { error } = await supabase.from('archivos_apuntes').update({ carpeta_id: newFolderId }).eq('id', file.id);
+          if (!error) {
+            router.refresh();
+          }
+          setIsSavingActions(false);
+        }}
       />
     </main>
   );
