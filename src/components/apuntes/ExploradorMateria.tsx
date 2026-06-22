@@ -174,7 +174,7 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
       const actualFolderId = urlParams.get("folder") || initialFolderId;
       
       if (actualFolderId) {
-        const targetFolder = allFolders.find((f: any) => f.id === actualFolderId);
+        const targetFolder = allFolders.find((f: any) => f.id === actualFolderId || f.slug === actualFolderId);
         if (targetFolder) {
           const newBreadcrumbs: CarpetaApunte[] = [];
           let curr: any = targetFolder;
