@@ -192,6 +192,70 @@ export async function getMateriaById(id: string): Promise<Materia | undefined> {
 }
 
 
+// Get document by slug or ID
+export async function getDocumentBySlugOrId(slugOrId: string): Promise<any> {
+  const supabase = await createClient();
+  
+  // Attempt to match by UUID first
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
+  
+  let query = supabase
+    .from("archivos_apuntes")
+    .select(`
+      *,
+      perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
+      carpetas_apuntes(id, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
+    `);
+
+  if (isUUID) {
+    query = query.eq("id", slugOrId);
+  } else {
+    query = query.eq("slug", slugOrId);
+  }
+
+  const { data, error } = await query.single();
+
+  if (error || !data) {
+    // If not found by ID and it was a UUID, maybe it's actually a slug that looks like a UUID? 
+    // Very unlikely, but we can fallback if needed.
+    // For now, if error, try finding by slug just in case.
+    if (isUUID) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("archivos_apuntes")
+        .select(`
+          *,
+          perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
+          carpetas_apuntes(id, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
+        `)
+        .eq("slug", slugOrId)
+        .single();
+        
+      if (!fallbackError && fallbackData) return fallbackData;
+    }
+    return null;
+  }
+
+  return data;
+}
+
+// Get all document slugs for sitemap
+export async function getAllDocumentSlugs(): Promise<{ slug: string; id: string; updated_at: string }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("archivos_apuntes")
+    .select("slug, id, fecha_subida")
+    .not("slug", "is", null);
+
+  if (error) {
+    console.error("Error fetching document slugs:", error.message);
+    return [];
+  }
+  return data.map((doc: any) => ({
+    slug: doc.slug,
+    id: doc.id,
+    updated_at: doc.fecha_subida,
+  }));
+}
 
 // Get latest archivos across all subjects
 export async function getLatestArchivos(limit: number = 4): Promise<any[]> {
@@ -692,4 +756,12 @@ export async function getRoadmapFeatures(): Promise<{ id: string; titulo: string
     return [];
   }
   return data;
+}
+
+// Get all profesores for sitemap
+export async function getAllProfesores(): Promise<{ id: string }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profesores").select("id");
+  if (error) return [];
+  return data || [];
 }
