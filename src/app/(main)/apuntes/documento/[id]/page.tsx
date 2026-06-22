@@ -1,9 +1,48 @@
+import { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import DocumentViewClient from "./DocumentViewClient";
 import { TrackVisit } from "@/components/ui/TrackVisit";
+import { getDocumentBySlugOrId } from "@/lib/academic";
 
-export default async function DocumentoPage({ params }: { params: Promise<{ id: string }> }) {
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const file = await getDocumentBySlugOrId(id);
+
+  if (!file) {
+    return {
+      title: "Documento no encontrado",
+    };
+  }
+
+  const materiaName = file.carpetas_apuntes?.materias?.nombre;
+  const title = file.nombre;
+  const description = `${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
+  const url = `/apuntes/documento/${file.slug || file.id}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
+export default async function DocumentoPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -20,20 +59,8 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
     currentUser = profile;
   }
 
-  // Fetch the file and its related data
-  const { data: file, error } = await supabase
-    .from("archivos_apuntes")
-    .select(`
-      *,
-      perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
-      carpetas_apuntes(id, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
-    `)
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching file:", error);
-  }
+  // Fetch the file and its related data using the helper
+  const file = await getDocumentBySlugOrId(id);
 
   if (!file) {
     notFound();
@@ -43,7 +70,7 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
   const { data: interacciones } = await supabase
     .from("interacciones_apuntes")
     .select("tipo, usuario_id")
-    .eq("archivo_id", id);
+    .eq("archivo_id", file.id);
 
   const likes = interacciones?.filter((i: any) => i.tipo === 'like').length || 0;
   const dislikes = interacciones?.filter((i: any) => i.tipo === 'dislike').length || 0;
@@ -60,7 +87,7 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
     const { data: save } = await supabase
       .from("apuntes_guardados")
       .select("id")
-      .eq("archivo_id", id)
+      .eq("archivo_id", file.id)
       .eq("usuario_id", user.id)
       .single();
 
@@ -69,8 +96,26 @@ export default async function DocumentoPage({ params }: { params: Promise<{ id: 
     }
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": file.nombre,
+    "description": `${file.nombre}${file.carpetas_apuntes?.materias?.nombre ? ` — ${file.carpetas_apuntes.materias.nombre}` : ''}`,
+    "url": `https://www.mostcloud.space/apuntes/documento/${file.slug || file.id}`,
+    "datePublished": file.fecha_subida,
+    "author": {
+      "@type": "Person",
+      "name": file.perfiles?.nombre_completo || "Usuario anónimo",
+      "url": file.perfiles ? `https://www.mostcloud.space/perfil/${file.perfiles.apodo || file.creador_id}` : undefined
+    }
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <TrackVisit entidadId={file.id} tipoEntidad="apunte" />
       <DocumentViewClient 
         file={file} 

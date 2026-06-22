@@ -12,6 +12,7 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toggleLikeDislike, toggleSave } from "../../acciones";
 import { DownloadCuadernoModal } from "@/components/apuntes/DownloadCuadernoModal";
+import { ShareDialog } from "@/components/ui/share-dialog";
 import { createClient } from "@/utils/supabase/client";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
@@ -42,6 +43,7 @@ export default function DocumentViewClient({
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [showCollabs, setShowCollabs] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const supabase = createClient();  
   const handleLike = async () => {
     if (!currentUser) return;
@@ -391,6 +393,9 @@ export default function DocumentViewClient({
             <Button onClick={handleSave} variant="ghost" size="sm" className={cn("hidden md:flex rounded-full h-8 px-3 transition-colors", savedBtnClass)}>
               <Bookmark className={cn("w-3.5 h-3.5 mr-1.5", isSaved && "fill-current")} /> <span className="text-xs">{isSaved ? "Guardado" : "Guardar"}</span>
             </Button>
+            <Button onClick={() => setIsShareDialogOpen(true)} variant="ghost" size="sm" className={cn("hidden md:flex rounded-full h-8 px-3 transition-colors", savedBtnClass)}>
+              <Share className="w-3.5 h-3.5 mr-1.5" /> <span className="text-xs">Compartir</span>
+            </Button>
             <Button onClick={handleDownload} size="sm" className={cn("bg-green-600 hover:bg-green-700 text-white rounded-full font-bold shadow-sm px-2.5 sm:px-4 h-8 text-xs", isSpecialBg && "shadow-none border border-green-500")}>
               <Download className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Descargar</span>
             </Button>
@@ -501,7 +506,9 @@ export default function DocumentViewClient({
             <Button onClick={handleSave} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", savedBtnClass)}>
               <Bookmark className={cn("w-4 h-4 mr-2", isSaved && "fill-current")} /> {isSaved ? "Guardado" : "Guardar"}
             </Button>
-
+            <Button onClick={() => setIsShareDialogOpen(true)} variant="ghost" size="sm" className={cn("rounded-full hidden sm:flex transition-colors", savedBtnClass)}>
+              <Share className="w-4 h-4 mr-2" /> Compartir
+            </Button>
           </div>
         </div>
       </header>
@@ -517,7 +524,16 @@ export default function DocumentViewClient({
             onDislike={handleDislike}
           />
         ) : (
-          <VisorCuaderno file={file} onClose={() => router.back()} currentUserId={currentUser?.id} isAdmin={currentUser?.rol === 'admin'} onCollaboratorsLoad={setCollaborators} />
+          <VisorCuaderno 
+            file={file} 
+            onClose={() => router.back()} 
+            currentUserId={currentUser?.id} 
+            isAdmin={currentUser?.rol === 'admin'} 
+            onCollaboratorsLoad={setCollaborators}
+            interaction={interaction}
+            onLike={handleLike}
+            onDislike={handleDislike}
+          />
         )}
       </div>
 
@@ -526,6 +542,13 @@ export default function DocumentViewClient({
         onClose={() => setShowDownloadModal(false)}
         onDownloadPdf={handleDownloadPdf}
         onDownloadZip={handleDownloadZip}
+      />
+
+      <ShareDialog 
+        isOpen={isShareDialogOpen} 
+        onOpenChange={setIsShareDialogOpen} 
+        title={`Compartir ${file.nombre}`}
+        text={`Mira este ${isCuaderno ? 'cuaderno' : 'documento'} en Most Cloud`}
       />
     </main>
   );
