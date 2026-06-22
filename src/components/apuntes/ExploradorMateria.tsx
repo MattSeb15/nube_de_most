@@ -146,7 +146,7 @@ export function ExploradorMateria({ materia, initialFileId, initialFolderId }: E
   const fetchFoldersFromSupabase = async (cacheKey: string, isBackground: boolean, cachedData: any[] | null) => {
     const { data: allFoldersData } = await supabase
       .from("carpetas_apuntes")
-      .select("*, perfiles!creador_id(nombre_completo, rol, avatar_url, apodo), archivos_apuntes(id, tipo, creador_id, perfiles!creador_id(id, nombre_completo, avatar_url, apodo), paginas_cuaderno(creador_id, url_imagen, perfiles!creador_id(id, nombre_completo, avatar_url, apodo)))")
+      .select("*, perfiles!creador_id(nombre_completo, rol, avatar_url, apodo), archivos_apuntes(id, slug, tipo, creador_id, perfiles!creador_id(id, nombre_completo, avatar_url, apodo), paginas_cuaderno(creador_id, url_imagen, perfiles!creador_id(id, nombre_completo, avatar_url, apodo)))")
       .eq("visible", true)
       .eq("materia_id", materia.id)
       .order("nombre");
