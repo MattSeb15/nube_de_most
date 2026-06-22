@@ -23,6 +23,7 @@ interface MultiImageUploadModalProps {
   onUpload: (optimizedFiles: File[]) => Promise<void>;
   maxWidth?: number;
   maxHeight?: number;
+  inline?: boolean;
 }
 
 export function MultiImageUploadModal({
@@ -31,7 +32,8 @@ export function MultiImageUploadModal({
   onClose,
   onUpload,
   maxWidth = 1920,
-  maxHeight = 1920
+  maxHeight = 1920,
+  inline = false
 }: MultiImageUploadModalProps) {
   const [fileItems, setFileItems] = useState<FileItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -232,17 +234,16 @@ export function MultiImageUploadModal({
     ? Math.round(((totalOriginalSize - totalOptimizedSize) / totalOriginalSize) * 100) 
     : 0;
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !isUploading && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-w-4xl w-[95vw] bg-[#f8f9fa] dark:bg-[#0a0a0a] border-neutral-200 dark:border-neutral-800 rounded-2xl p-0 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        <DialogHeader className="p-6 pb-4 border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm shrink-0">
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+  const content = (
+    <div className={`bg-[#f8f9fa] dark:bg-[#0a0a0a] flex flex-col w-full rounded-2xl overflow-hidden ${inline ? 'h-full border border-neutral-200 dark:border-neutral-800' : 'h-[85vh] sm:h-[80vh] shadow-2xl border border-neutral-200 dark:border-neutral-800'}`}>
+      <DialogHeader className="p-6 pb-4 border-b border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm shrink-0">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
             <Images className="w-6 h-6 text-purple-500" /> 
             Subir múltiples páginas
-          </DialogTitle>
-          <DialogDescription className="text-neutral-500 dark:text-neutral-400">
+          </h2>
+          <p className="text-neutral-500 dark:text-neutral-400 mt-2">
             Se han seleccionado {fileItems.length} imágenes. Puedes ordenar las páginas usando las flechas y revisar la optimización antes de subir.
-          </DialogDescription>
+          </p>
 
           {/* Progress Bar */}
           {fileItems.length > 0 && (
@@ -498,7 +499,6 @@ export function MultiImageUploadModal({
             </Button>
           </div>
         </DialogFooter>
-      </DialogContent>
 
       {/* Zoom Overlay */}
       <AnimatePresence>
@@ -620,6 +620,19 @@ export function MultiImageUploadModal({
           </motion.div>
         )}
       </AnimatePresence>
+
+    </div>
+  );
+
+  if (inline) {
+    return content;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isUploading && onClose()}>
+      <DialogContent className="sm:max-w-4xl max-w-4xl w-[95vw] p-0 overflow-hidden bg-transparent border-none shadow-none" showCloseButton={false}>
+        {content}
+      </DialogContent>
     </Dialog>
   );
 }
