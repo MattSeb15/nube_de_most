@@ -42,7 +42,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
 
   useEffect(() => {
     setMounted(true);
-    
+
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -93,12 +93,12 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
 
   return (
     <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center overflow-hidden bg-background pt-24 pb-16">
-      
+
       {/* Orbital Background */}
       <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
-        
+
         {/* Inner Orbit Container (Materias) */}
-        <motion.div 
+        <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 160, repeat: Infinity, ease: "linear" }} // Faster inner orbit
           className="absolute rounded-full flex items-center justify-center"
@@ -108,21 +108,21 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
             const radius = 10 + Math.random() * 5; // Inner orbit (closer to center)
             const angle = (i / arr.length) * 360;
             const angleRad = (angle * Math.PI) / 180;
-            
+
             const left = 50 + radius * Math.cos(angleRad);
             const top = 50 + radius * Math.sin(angleRad);
-            
-            const size = 90 + Math.random() * 20; 
+
+            const size = 90 + Math.random() * 20;
 
             return (
-              <div 
-                key={item.id} 
-                className="absolute pointer-events-auto" 
+              <div
+                key={item.id}
+                className="absolute pointer-events-auto"
                 style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
               >
-                <motion.div 
-                  animate={{ rotate: -360, y: [0, -10, 0] }} 
-                  transition={{ 
+                <motion.div
+                  animate={{ rotate: -360, y: [0, -10, 0] }}
+                  transition={{
                     rotate: { duration: 160, repeat: Infinity, ease: "linear" }, // Match inner orbit speed
                     y: { duration: 4 + Math.random() * 2, repeat: Infinity, ease: "easeInOut" }
                   }}
@@ -130,10 +130,10 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
                   className="relative group cursor-pointer"
                 >
                   <div className="pointer-events-auto origin-center shadow-xl hover:shadow-2xl transition-shadow rounded-xl"
-                       style={{ 
-                         width: "300px",
-                         transform: `scale(${size / 200})`
-                       }}>
+                    style={{
+                      width: "300px",
+                      transform: `scale(${size / 200})`
+                    }}>
                     {item.originalMateria && (
                       <MateriaCard materia={item.originalMateria} href={`/apuntes/nivelacion/${item.materiaSlug}`} />
                     )}
@@ -145,7 +145,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
         </motion.div>
 
         {/* Outer Orbit Container (Apuntes/Archivos) */}
-        <motion.div 
+        <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 220, repeat: Infinity, ease: "linear" }} // Slower outer orbit
           className="absolute rounded-full flex items-center justify-center"
@@ -155,21 +155,21 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
             const radius = 18 + Math.random() * 6; // Middle orbit
             const angle = (i / arr.length) * 360;
             const angleRad = (angle * Math.PI) / 180;
-            
+
             const left = 50 + radius * Math.cos(angleRad);
             const top = 50 + radius * Math.sin(angleRad);
-            
+
             const size = 80 + Math.random() * 20; // Slightly smaller for outer orbit
 
             return (
-              <div 
-                key={item.id} 
-                className="absolute pointer-events-auto" 
+              <div
+                key={item.id}
+                className="absolute pointer-events-auto"
                 style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
               >
-                <motion.div 
-                  animate={{ rotate: -360, y: [0, -10, 0] }} 
-                  transition={{ 
+                <motion.div
+                  animate={{ rotate: -360, y: [0, -10, 0] }}
+                  transition={{
                     rotate: { duration: 220, repeat: Infinity, ease: "linear" }, // Match outer orbit speed
                     y: { duration: 4 + Math.random() * 2, repeat: Infinity, ease: "easeInOut" }
                   }}
@@ -177,10 +177,10 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
                   className="relative group cursor-pointer"
                 >
                   <div className="pointer-events-auto origin-center shadow-xl hover:shadow-2xl transition-shadow rounded-xl"
-                       style={{ 
-                         width: "280px",
-                         transform: `scale(${size / 200})`
-                       }}>
+                    style={{
+                      width: "280px",
+                      transform: `scale(${size / 200})`
+                    }}>
                     {item.originalArchivo && (
                       <ArchivoCard archivo={item.originalArchivo} />
                     )}
@@ -193,7 +193,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
 
         {/* Outermost Orbit Container (Usuarios) */}
         {users.length > 0 && (
-          <motion.div 
+          <motion.div
             animate={{ rotate: -360 }}
             transition={{ duration: 300, repeat: Infinity, ease: "linear" }} // Slowest outermost orbit, rotating opposite
             className="absolute rounded-full flex items-center justify-center"
@@ -203,22 +203,22 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
               const radius = 26 + Math.random() * 5; // Outermost orbit (now closer)
               const angle = (i / arr.length) * 360;
               const angleRad = (angle * Math.PI) / 180;
-              
+
               const left = 50 + radius * Math.cos(angleRad);
               const top = 50 + radius * Math.sin(angleRad);
-              
+
               const size = 50 + Math.random() * 20;
 
               return (
-                <div 
-                  key={u.id} 
-                  className="absolute pointer-events-auto" 
+                <div
+                  key={u.id}
+                  className="absolute pointer-events-auto"
                   style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
                 >
-                  <motion.div 
-                    animate={{ rotate: 360, y: [0, -10, 0] }} 
-                    transition={{ 
-                      rotate: { duration: 300, repeat: Infinity, ease: "linear" }, 
+                  <motion.div
+                    animate={{ rotate: 360, y: [0, -10, 0] }}
+                    transition={{
+                      rotate: { duration: 300, repeat: Infinity, ease: "linear" },
                       y: { duration: 4 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: Math.random() * 2 }
                     }}
                     whileHover={{ scale: 1.2, zIndex: 50 }}
@@ -245,7 +245,7 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
       </div>
 
       {/* Neblina (fog) central para difuminar las tarjetas bajo el texto */}
-      <div 
+      <div
         className="absolute inset-0 z-10 pointer-events-none bg-background"
         style={{
           maskImage: 'radial-gradient(ellipse min(900px, 140vw) min(700px, 140vh) at center, black 20%, transparent 80%)',
@@ -254,28 +254,22 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
       />
       {/* Foreground Content */}
       <div className="relative z-10 flex flex-col items-center text-center px-4 mt-8 md:mt-0 w-full max-w-4xl mx-auto">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ 
-            opacity: 1, 
-            y: [0, -8, 0] 
-          }}
-          transition={{ 
-            opacity: { duration: 0.8, delay: 0.05 },
-            y: { duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.8 }
-          }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.05 }}
           className="mb-6"
         >
           <Link href="/aprender">
-            <div className="inline-flex items-center gap-3 px-3 py-1.5 rounded-full bg-primary/5 backdrop-blur-md border border-primary/20 text-foreground hover:bg-primary/10 transition-all cursor-pointer shadow-sm group">
-              <span className="bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">New</span>
-              <span className="text-sm font-medium text-primary">Aprende a dominar la plataforma</span>
-              <ArrowRight className="size-4 text-primary group-hover:translate-x-1 transition-transform" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all cursor-pointer shadow-sm group">
+              <span className="flex size-2 rounded-full bg-primary animate-pulse"></span>
+              <span className="text-sm font-semibold">¡Nueva sección para Aprender!</span>
+              <ArrowRight className="size-4 ml-1 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1 }}
@@ -285,8 +279,8 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
             La Nube de Most
           </h1>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -299,36 +293,36 @@ export function OrbitalHero({ items, stats, users = [] }: OrbitalHeroProps) {
           </p>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
           className="flex flex-wrap items-center justify-center gap-4 mb-16"
         >
-           {!user ? (
-             <>
-               <Link href="/login?mode=register">
-                 <Button size="lg" className="rounded-full px-8 h-14 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 transition-transform hover:scale-105">
-                   Registrarse
-                 </Button>
-               </Link>
-               <Link href="/apuntes">
-                 <Button variant="outline" size="lg" className="rounded-full px-8 h-14 text-lg font-semibold bg-background/50 backdrop-blur-sm border-border hover:bg-background/80 transition-transform hover:scale-105">
-                   Obtener apuntes
-                 </Button>
-               </Link>
-             </>
-           ) : (
-             <Link href="/apuntes">
-               <Button size="lg" className="rounded-full px-8 h-14 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 transition-transform hover:scale-105">
-                 Explorar apuntes
-               </Button>
-             </Link>
-           )}
+          {!user ? (
+            <>
+              <Link href="/login?mode=register">
+                <Button size="lg" className="rounded-full px-8 h-14 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 transition-transform hover:scale-105">
+                  Registrarse
+                </Button>
+              </Link>
+              <Link href="/apuntes">
+                <Button variant="outline" size="lg" className="rounded-full px-8 h-14 text-lg font-semibold bg-background/50 backdrop-blur-sm border-border hover:bg-background/80 transition-transform hover:scale-105">
+                  Obtener apuntes
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link href="/apuntes">
+              <Button size="lg" className="rounded-full px-8 h-14 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 transition-transform hover:scale-105">
+                Explorar apuntes
+              </Button>
+            </Link>
+          )}
         </motion.div>
 
         {stats && stats.length > 0 && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
