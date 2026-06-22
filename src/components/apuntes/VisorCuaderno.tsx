@@ -56,10 +56,17 @@ interface VisorCuadernoProps {
 }
 
 export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollaboratorsLoad, interaction, onLike, onDislike }: VisorCuadernoProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const initialPageStr = searchParams?.get("page");
+  const initialPageIndex = initialPageStr ? Math.max(0, parseInt(initialPageStr, 10) - 1) : 0;
+
   const [paginas, setPaginas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [currentPageIndex, setCurrentPageIndex] = useState(initialPageIndex);
   const [direction, setDirection] = useState(0);
 
   const footerRef = useRef<HTMLDivElement>(null);
@@ -93,9 +100,6 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
   const dragStart = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const [isFullscreen, setIsFullscreen] = useState(searchParams?.get("fullscreen") === "true");
   const [isEditing, setIsEditing] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -154,27 +158,38 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
   const canAddPage = isOwner || file.colaborativa;
 
   const renderChip = (page: any, isRightPage: boolean = false) => {
-    if (!file.colaborativa || !page?.perfiles) return null;
-    
-    const isCurrentUser = page.creador_id === currentUserId;
-    const isPageOwner = page.creador_id === (file as any).creador_id;
-    const profileUrl = `/perfil/${page.perfiles.apodo || page.perfiles.id || page.creador_id}`;
-    
-    const bgColor = isCurrentUser 
-      ? "bg-purple-600/90 hover:bg-purple-600 border-purple-500/50" 
-      : isPageOwner 
-        ? "bg-blue-600/90 hover:bg-blue-600 border-blue-500/50"
-        : "bg-black/60 hover:bg-black/80 border-white/10";
+    const hasTag = !!page.etiqueta;
+    const hasProfile = file.colaborativa && !!page?.perfiles;
 
-    const dateStr = page.created_at || page.fecha_creacion || page.fecha_subida || page.fecha_clase || page.fechaClase;
-    const formattedDate = dateStr ? format(new Date(dateStr), "d MMM, HH:mm", { locale: es }) : "";
+    if (!hasTag && !hasProfile) return null;
+
+    let profileUrl = "";
+    let isCurrentUser = false;
+    let isPageOwner = false;
+    let bgColor = "";
+    let formattedDate = "";
+
+    if (hasProfile) {
+      isCurrentUser = page.creador_id === currentUserId;
+      isPageOwner = page.creador_id === (file as any).creador_id;
+      profileUrl = `/perfil/${page.perfiles.apodo || page.perfiles.id || page.creador_id}`;
+      
+      bgColor = isCurrentUser 
+        ? "bg-purple-600/90 hover:bg-purple-600 border-purple-500/50" 
+        : isPageOwner 
+          ? "bg-blue-600/90 hover:bg-blue-600 border-blue-500/50"
+          : "bg-black/60 hover:bg-black/80 border-white/10";
+
+      const dateStr = page.created_at || page.fecha_creacion || page.fecha_subida || page.fecha_clase || page.fechaClase;
+      formattedDate = dateStr ? format(new Date(dateStr), "d MMM, HH:mm", { locale: es }) : "";
+    }
 
     return (
       <div 
         className={`absolute bottom-full mb-1.5 sm:mb-2 ${isRightPage ? 'right-0 origin-bottom-right items-end' : 'left-0 origin-bottom-left items-start'} z-20 pointer-events-auto transition-all duration-300 ${zoomLevel !== 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'} flex flex-col sm:flex-row gap-1.5 sm:gap-2 ${isRightPage ? 'sm:justify-end' : 'sm:justify-start'}`}
         style={{ transform: `scale(${1 / zoomLevel})` }}
       >
-        {page.etiqueta && (
+        {hasTag && (
           <div 
             style={{ backgroundColor: `${getEtiquetaHexColor(page.etiqueta_color)}e6` }}
             className="backdrop-blur-md rounded-full text-white px-3 py-1.5 flex items-center gap-1.5 shadow-md border border-white/20 max-w-full"
@@ -188,29 +203,31 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
             )}
           </div>
         )}
-        <Link 
-          href={profileUrl}
-          className={`backdrop-blur-md rounded-full text-white px-2 sm:px-2.5 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-md border transition-all hover:scale-105 max-w-full ${bgColor}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-        {page.perfiles.avatar_url ? (
-          <img src={page.perfiles.avatar_url} className="w-5 h-5 sm:w-5 sm:h-5 rounded-full object-cover shadow-sm border border-white/20 shrink-0" alt="Avatar" />
-        ) : (
-          <div className="w-5 h-5 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold shadow-sm shrink-0">
-            {page.perfiles.nombre_completo?.[0] || 'U'}
-          </div>
+        {hasProfile && (
+          <Link 
+            href={profileUrl}
+            className={`backdrop-blur-md rounded-full text-white px-2 sm:px-2.5 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-md border transition-all hover:scale-105 max-w-full ${bgColor}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {page.perfiles.avatar_url ? (
+              <img src={page.perfiles.avatar_url} className="w-5 h-5 sm:w-5 sm:h-5 rounded-full object-cover shadow-sm border border-white/20 shrink-0" alt="Avatar" />
+            ) : (
+              <div className="w-5 h-5 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold shadow-sm shrink-0">
+                {page.perfiles.nombre_completo?.[0] || 'U'}
+              </div>
+            )}
+            <div className="flex flex-col items-start leading-none min-w-0">
+              <span className="text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[200px] font-medium opacity-90">
+                {isCurrentUser ? "Tú" : page.perfiles.nombre_completo}
+              </span>
+              {formattedDate && (
+                <span className="text-[8px] sm:text-[9px] opacity-70 font-normal mt-0.5 whitespace-nowrap">
+                  {formattedDate}
+                </span>
+              )}
+            </div>
+          </Link>
         )}
-        <div className="flex flex-col items-start leading-none min-w-0">
-          <span className="text-[10px] sm:text-xs truncate max-w-[80px] sm:max-w-[200px] font-medium opacity-90">
-            {isCurrentUser ? "Tú" : page.perfiles.nombre_completo}
-          </span>
-          {formattedDate && (
-            <span className="text-[8px] sm:text-[9px] opacity-70 font-normal mt-0.5 whitespace-nowrap">
-              {formattedDate}
-            </span>
-          )}
-        </div>
-        </Link>
       </div>
     );
   };
@@ -385,11 +402,27 @@ export function VisorCuaderno({ file, onClose, currentUserId, isAdmin, onCollabo
   }, [paginasVisibles]);
 
   useEffect(() => {
-    if (!isEditing && currentPageIndex >= paginasVisibles.length) {
+    if (!loading && !isEditing && currentPageIndex >= paginasVisibles.length && paginasVisibles.length > 0) {
       const maxIdx = Math.max(0, paginasVisibles.length - 1);
       setCurrentPageIndex(maxIdx % 2 === 0 ? maxIdx : maxIdx - 1);
     }
-  }, [isEditing, paginasVisibles.length, currentPageIndex]);
+  }, [loading, isEditing, paginasVisibles.length, currentPageIndex]);
+
+  useEffect(() => {
+    if (!mounted || paginasVisibles.length === 0) return;
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    const newPage = currentPageIndex + 1;
+    
+    const currentPageInUrl = params.get("page");
+    if (currentPageInUrl !== newPage.toString() && !(newPage === 1 && !currentPageInUrl)) {
+      if (newPage === 1) {
+        params.delete("page");
+      } else {
+        params.set("page", newPage.toString());
+      }
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [currentPageIndex, pathname, router, searchParams, mounted, paginasVisibles.length]);
 
   const handleNext = () => {
     const step = isDoublePage ? 2 : 1;
