@@ -1,5 +1,5 @@
 import { MetadataRoute } from "next";
-import { getSemestres, getAllMaterias, getAllUsernames } from "@/lib/academic";
+import { getSemestres, getAllMaterias, getAllUsernames, getAllDocumentSlugs, getAllProfesores } from "@/lib/academic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.mostcloud.space";
@@ -33,10 +33,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // Rutas dinámicas
-  const [semestres, materias, usernames] = await Promise.all([
+  const [semestres, materias, usernames, documentSlugs, profesores] = await Promise.all([
     getSemestres(),
     getAllMaterias(),
     getAllUsernames(),
+    getAllDocumentSlugs(),
+    getAllProfesores(),
   ]);
 
   const semestresRoutes: MetadataRoute.Sitemap = semestres.map((semestre) => ({
@@ -53,8 +55,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-
-
   const perfilesRoutes: MetadataRoute.Sitemap = usernames.map((username) => ({
     url: `${baseUrl}/perfil/${username}`,
     lastModified: new Date(),
@@ -62,5 +62,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...semestresRoutes, ...materiasRoutes, ...perfilesRoutes];
+  const documentRoutes: MetadataRoute.Sitemap = documentSlugs.map((doc) => ({
+    url: `${baseUrl}/apuntes/documento/${doc.slug || doc.id}`,
+    lastModified: new Date(doc.updated_at || new Date()),
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  const profesoresRoutes: MetadataRoute.Sitemap = profesores.map((profesor) => ({
+    url: `${baseUrl}/profesores/${profesor.id}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [
+    ...staticRoutes, 
+    ...semestresRoutes, 
+    ...materiasRoutes, 
+    ...perfilesRoutes,
+    ...documentRoutes,
+    ...profesoresRoutes
+  ];
 }
