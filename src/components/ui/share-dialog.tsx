@@ -89,9 +89,9 @@ export function ShareDialog({ isOpen, onOpenChange, title = "Compartir", text = 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-white dark:bg-neutral-900 overflow-hidden shadow-2xl border-neutral-200 dark:border-neutral-800 rounded-3xl">
-        <DialogHeader className="px-2 pt-2">
+        <DialogHeader className="px-2 pt-2 min-w-0">
           <DialogTitle className="text-xl font-bold truncate pr-8" title={title}>{title}</DialogTitle>
-          {text && <DialogDescription className="text-neutral-500">{text}</DialogDescription>}
+          {text && <DialogDescription className="text-neutral-500 break-words line-clamp-2">{text}</DialogDescription>}
         </DialogHeader>
 
         <div className="flex flex-col gap-6 py-4 min-w-0 w-full">
