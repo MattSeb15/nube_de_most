@@ -178,7 +178,28 @@ export default function DocumentViewClient({
   };
 
   const dateStr = file.created_at || file.fecha_subida || file.fechaSubida || file.fecha_creacion;
-  const materia = file.carpetas_apuntes?.materias;
+  const carpeta = Array.isArray(file.carpetas_apuntes)
+    ? file.carpetas_apuntes[0]
+    : file.carpetas_apuntes;
+  const materia = carpeta?.materias || file.materia;
+
+  const handleBack = () => {
+    const semestreSlug = materia?.semestres?.slug || materia?.semestre_id;
+    const materiaSlug = materia?.slug || materia?.id;
+    const folderParam = carpeta?.slug || carpeta?.id || file.carpeta_id;
+
+    const fallbackUrl = (semestreSlug && materiaSlug)
+      ? `/apuntes/${semestreSlug}/${materiaSlug}${folderParam ? `?folder=${folderParam}` : ""}`
+      : "/apuntes";
+
+    const isInternalReferrer = typeof document !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin);
+
+    if (isInternalReferrer && typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(fallbackUrl);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -444,7 +465,7 @@ export default function DocumentViewClient({
       >
         <div className={cn("backdrop-blur-md border shadow-md rounded-2xl p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 pointer-events-auto", floatingBg)}>
           <div className="w-full sm:flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
-            <Button onClick={() => router.back()} variant="ghost" size="icon" className={cn("shrink-0 rounded-full h-8 w-8 sm:h-9 sm:w-9", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
+            <Button onClick={handleBack} variant="ghost" size="icon" className={cn("shrink-0 rounded-full h-8 w-8 sm:h-9 sm:w-9", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <div className={cn("hidden sm:flex h-8 w-8 rounded-full items-center justify-center shrink-0", iconBg)}>
@@ -521,7 +542,7 @@ export default function DocumentViewClient({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0 flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <Button onClick={() => router.back()} variant="ghost" size="icon" className={cn("shrink-0 rounded-full -ml-2", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
+              <Button onClick={handleBack} variant="ghost" size="icon" className={cn("shrink-0 rounded-full -ml-2", isSpecialBg ? "text-white hover:bg-white/20" : "text-foreground")}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight truncate">
@@ -663,7 +684,7 @@ export default function DocumentViewClient({
         {file.tipo === "pdf" ? (
           <VisorPDF 
             file={file} 
-            onClose={() => router.back()} 
+            onClose={handleBack} 
             interaction={interaction}
             onLike={handleLike}
             onDislike={handleDislike}
@@ -671,7 +692,7 @@ export default function DocumentViewClient({
         ) : (
           <VisorCuaderno 
             file={file} 
-            onClose={() => router.back()} 
+            onClose={handleBack} 
             currentUserId={currentUser?.id} 
             isAdmin={currentUser?.rol === 'admin'} 
             onCollaboratorsLoad={setCollaborators}

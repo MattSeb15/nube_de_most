@@ -204,7 +204,7 @@ export async function getDocumentBySlugOrId(slugOrId: string): Promise<any> {
     .select(`
       *,
       perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
-      carpetas_apuntes(id, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
+      carpetas_apuntes(id, slug, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
     `);
 
   if (isUUID) {
@@ -225,7 +225,7 @@ export async function getDocumentBySlugOrId(slugOrId: string): Promise<any> {
         .select(`
           *,
           perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
-          carpetas_apuntes(id, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
+          carpetas_apuntes(id, slug, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
         `)
         .eq("slug", slugOrId)
         .single();
