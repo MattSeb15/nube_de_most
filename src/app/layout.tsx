@@ -44,11 +44,20 @@ export const metadata: Metadata = {
     title: "La Nube de Most | Apuntes UTA",
     description: "Plataforma de recursos académicos para la Universidad Técnica de Ambato. Apuntes y material de estudio.",
     siteName: "La Nube de Most",
+    images: [
+      {
+        url: "/opengrapht_tumb.webp",
+        width: 1200,
+        height: 630,
+        alt: "La Nube de Most | Apuntes UTA",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "La Nube de Most | Apuntes UTA",
     description: "Plataforma de recursos académicos para la Universidad Técnica de Ambato.",
+    images: ["/opengrapht_tumb.webp"],
   },
   robots: {
     index: true,

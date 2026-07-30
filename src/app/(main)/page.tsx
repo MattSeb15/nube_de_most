@@ -34,6 +34,20 @@ export const metadata: Metadata = {
     title: "La Nube de Most — Apuntes de Software y Nivelación UTA",
     description: "El espacio definitivo de apuntes, recursos y actividades académicas para la carrera de Ingeniería en Software y nivelación en la Universidad Técnica de Ambato (UTA).",
     url: "/",
+    images: [
+      {
+        url: "/opengrapht_tumb.webp",
+        width: 1200,
+        height: 630,
+        alt: "La Nube de Most",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "La Nube de Most — Apuntes de Software y Nivelación UTA",
+    description: "El espacio definitivo de apuntes, recursos y actividades académicas para la carrera de Ingeniería en Software y nivelación en la Universidad Técnica de Ambato (UTA).",
+    images: ["/opengrapht_tumb.webp"],
   },
 };
 

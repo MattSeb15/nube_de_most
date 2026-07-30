@@ -23,17 +23,34 @@ export async function generateMetadata({ params, searchParams }: PageProps, pare
   }
 
   const materiaName = file.carpetas_apuntes?.materias?.nombre;
+  
+  // Calculate page count
+  const visiblePages = file.paginas_cuaderno?.filter((p: any) => !p.oculta) || [];
+  const numPages = visiblePages.length > 0 ? visiblePages.length : (file.paginas_cuaderno?.length || 0);
+  const paginasInfo = numPages > 0 ? `${numPages} ${numPages === 1 ? 'página' : 'páginas'}` : '';
+
   let title = file.nombre;
-  let description = `${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
+  if (paginasInfo) {
+    title = `${file.nombre} (${paginasInfo})`;
+  }
+  let description = `${file.nombre}${paginasInfo ? ` (${paginasInfo})` : ''}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
   let url = `/apuntes/documento/${file.slug || file.id}`;
 
   if (page && typeof page === 'string') {
-    title = `${file.nombre} - Página ${page}`;
-    description = `Página ${page} de ${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
+    title = `${file.nombre} - Página ${page}${numPages > 0 ? ` de ${numPages}` : ''}`;
+    description = `Página ${page}${numPages > 0 ? ` de ${numPages}` : ''} de ${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
     url = `${url}?page=${page}`;
   }
 
-  const previousImages = (await parent).openGraph?.images || [];
+  // Determine OpenGraph image
+  const firstPageImg = visiblePages[0]?.url_imagen || file.paginas_cuaderno?.[0]?.url_imagen;
+  let ogImage = "/open_graphs/notebook.png";
+
+  if (file.tipo === "pdf") {
+    ogImage = firstPageImg || "/open_graphs/pdf.png";
+  } else {
+    ogImage = firstPageImg || "/open_graphs/notebook.png";
+  }
 
   return {
     title,
@@ -44,12 +61,18 @@ export async function generateMetadata({ params, searchParams }: PageProps, pare
       description,
       url,
       type: "article",
-      images: previousImages,
+      images: [
+        {
+          url: ogImage,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [ogImage],
     },
   };
 }

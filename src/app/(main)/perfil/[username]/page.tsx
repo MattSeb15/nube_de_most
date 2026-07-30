@@ -70,11 +70,18 @@ export async function generateMetadata(
   const perfil = await getPerfilByUsername(username);
   if (!perfil) return { title: "Perfil no encontrado | La Nube de Most" };
 
-  const title = `${perfil.nombreCompleto || perfil.apodo} | Perfil en La Nube de Most`;
-  const description = perfil.bio || `Perfil académico de ${perfil.nombreCompleto || perfil.apodo} en La Nube de Most.`;
+  const archivos = await getArchivosByCreador(perfil.id);
+  const aportes = archivos.filter((a: any) => !a.esColaboracion).length;
+  const colaboraciones = archivos.filter((a: any) => a.esColaboracion).length;
+
+  const displayName = perfil.nombreCompleto || perfil.apodo;
+  const statsSummary = `${colaboraciones} ${colaboraciones === 1 ? 'colaboración' : 'colaboraciones'} • ${aportes} ${aportes === 1 ? 'aporte' : 'aportes'}`;
+  
+  const title = `${displayName} (@${perfil.apodo}) | Perfil en La Nube de Most`;
+  const description = `${statsSummary} de ${displayName} en La Nube de Most.${perfil.bio ? ` ${perfil.bio}` : ''}`;
   const url = `/perfil/${username}`;
 
-  const previousImages = (await parent).openGraph?.images || [];
+  const image = perfil.avatar_url || "/opengrapht_tumb.webp";
 
   return {
     title,
@@ -85,13 +92,18 @@ export async function generateMetadata(
       description,
       url,
       type: "profile",
-      images: perfil.avatar_url ? [{ url: perfil.avatar_url, width: 256, height: 256, alt: title }] : previousImages,
+      images: [
+        {
+          url: image,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(perfil.avatar_url ? { images: [perfil.avatar_url] } : {}),
+      images: [image],
     },
   };
 }

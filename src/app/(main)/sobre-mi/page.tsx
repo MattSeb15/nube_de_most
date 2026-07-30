@@ -15,6 +15,13 @@ export const metadata: Metadata = {
     title: "Acerca de | La Nube de Most",
     description: "Conoce a Mateo Sebastian Oviedo Trujillo (Most), creador de La Nube de Most y compartidor de apuntes académicos.",
     url: "/sobre-mi",
+    images: [{ url: "/opengrapht_tumb.webp", alt: "Acerca de | La Nube de Most" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Acerca de | La Nube de Most",
+    description: "Conoce a Mateo Sebastian Oviedo Trujillo (Most), creador de La Nube de Most y compartidor de apuntes académicos.",
+    images: ["/opengrapht_tumb.webp"],
   },
 };
 

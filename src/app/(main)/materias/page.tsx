@@ -12,6 +12,13 @@ export const metadata: Metadata = {
     title: "Todas las Materias | La Nube de Most",
     description: "Explora todas las materias registradas en la base de datos de La Nube de Most.",
     url: "/materias",
+    images: [{ url: "/open_graphs/folder.png", alt: "Todas las Materias | La Nube de Most" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Todas las Materias | La Nube de Most",
+    description: "Explora todas las materias registradas en la base de datos de La Nube de Most.",
+    images: ["/open_graphs/folder.png"],
   },
 };
 

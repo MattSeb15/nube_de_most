@@ -29,6 +29,13 @@ export async function generateMetadata({
       title,
       description,
       url,
+      images: [{ url: "/open_graphs/folder.png", alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/open_graphs/folder.png"],
     },
   };
 }

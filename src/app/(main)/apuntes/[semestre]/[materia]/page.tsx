@@ -11,14 +11,9 @@ import { MateriaIcon } from "@/components/ui/materia-icon";
 import {
   getSemestreBySlug,
   getMateriaBySlug,
+  getCarpetaBySlugOrId,
+  getDocumentBySlugOrId,
 } from "@/lib/academic";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface PageProps {
   params: Promise<{ semestre: string; materia: string }>;
@@ -26,19 +21,52 @@ interface PageProps {
 }
 
 export async function generateMetadata(
-  { params }: PageProps,
-  parent: ResolvingMetadata
+  { params, searchParams }: PageProps
 ): Promise<Metadata> {
   const { semestre: semestreSlug, materia: materiaSlug } = await params;
+  const sp = searchParams ? await searchParams : {};
   const semestre = await getSemestreBySlug(semestreSlug);
   const materia = await getMateriaBySlug(materiaSlug);
   if (!semestre || !materia) return { title: "Materia no encontrada" };
-  const title = `${materia.nombre} — ${semestre.nombre}`;
-  const description = materia.descripcion || `Apuntes y recursos de ${materia.nombre} para el ${semestre.nombre}.`;
-  const url = `/apuntes/${semestreSlug}/${materiaSlug}`;
-  
-  const previousImages = (await parent).openGraph?.images || [];
-  
+
+  const folderParam = typeof sp.folder === "string" ? sp.folder : undefined;
+  const fileParam = typeof sp.archivo === "string" ? sp.archivo : (typeof sp.cuaderno === "string" ? sp.cuaderno : undefined);
+
+  let title = `${materia.nombre} — ${semestre.nombre}`;
+  const totalMateriaFiles = materia.apuntesCount || 0;
+  let description = `Explorador de apuntes de ${materia.nombre} (${semestre.nombre}). Contiene ${totalMateriaFiles} ${totalMateriaFiles === 1 ? 'apunte' : 'apuntes'}.${materia.descripcion ? ` ${materia.descripcion}` : ''}`;
+  let ogImage = "/open_graphs/folder.png";
+  let url = `/apuntes/${semestreSlug}/${materiaSlug}`;
+
+  if (fileParam) {
+    const doc = await getDocumentBySlugOrId(fileParam);
+    if (doc) {
+      const visiblePages = doc.paginas_cuaderno?.filter((p: any) => !p.oculta) || [];
+      const numPages = visiblePages.length > 0 ? visiblePages.length : (doc.paginas_cuaderno?.length || 0);
+      const paginasInfo = numPages > 0 ? ` (${numPages} ${numPages === 1 ? 'página' : 'páginas'})` : '';
+      
+      title = `${doc.nombre}${paginasInfo} — ${materia.nombre}`;
+      description = `Apunte "${doc.nombre}"${paginasInfo} en ${materia.nombre} (${semestre.nombre}) | La Nube de Most`;
+      url = `${url}?${typeof sp.archivo === "string" ? 'archivo' : 'cuaderno'}=${fileParam}`;
+
+      const firstPageImg = visiblePages[0]?.url_imagen || doc.paginas_cuaderno?.[0]?.url_imagen;
+      if (doc.tipo === "pdf") {
+        ogImage = firstPageImg || "/open_graphs/pdf.png";
+      } else {
+        ogImage = firstPageImg || "/open_graphs/notebook.png";
+      }
+    }
+  } else if (folderParam) {
+    const carpeta = await getCarpetaBySlugOrId(folderParam);
+    if (carpeta) {
+      const cantArchivos = carpeta.archivos_apuntes?.length || 0;
+      title = `${carpeta.nombre} — ${materia.nombre}`;
+      description = `Carpeta "${carpeta.nombre}" en ${materia.nombre} (${semestre.nombre}). Contiene ${cantArchivos} ${cantArchivos === 1 ? 'apunte' : 'apuntes'}.`;
+      url = `${url}?folder=${folderParam}`;
+      ogImage = "/open_graphs/folder.png";
+    }
+  }
+
   return {
     title,
     description,
@@ -47,7 +75,18 @@ export async function generateMetadata(
       title,
       description,
       url,
-      images: previousImages,
+      images: [
+        {
+          url: ogImage,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
     },
   };
 }

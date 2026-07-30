@@ -22,6 +22,13 @@ export const metadata: Metadata = {
     title: "Apuntes | La Nube de Most",
     description: "Explora los apuntes organizados por semestre y materia en La Nube de Most.",
     url: "/apuntes",
+    images: [{ url: "/open_graphs/folder.png", alt: "Apuntes | La Nube de Most" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Apuntes | La Nube de Most",
+    description: "Explora los apuntes organizados por semestre y materia en La Nube de Most.",
+    images: ["/open_graphs/folder.png"],
   },
 };
 
