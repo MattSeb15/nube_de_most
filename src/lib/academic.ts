@@ -199,13 +199,16 @@ export async function getDocumentBySlugOrId(slugOrId: string): Promise<any> {
   // Attempt to match by UUID first
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
   
+  const selectQuery = `
+    *,
+    perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
+    carpetas_apuntes(id, slug, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug))),
+    paginas_cuaderno(id, url_imagen, orden, oculta)
+  `;
+
   let query = supabase
     .from("archivos_apuntes")
-    .select(`
-      *,
-      perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
-      carpetas_apuntes(id, slug, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
-    `);
+    .select(selectQuery);
 
   if (isUUID) {
     query = query.eq("id", slugOrId);
@@ -216,17 +219,10 @@ export async function getDocumentBySlugOrId(slugOrId: string): Promise<any> {
   const { data, error } = await query.single();
 
   if (error || !data) {
-    // If not found by ID and it was a UUID, maybe it's actually a slug that looks like a UUID? 
-    // Very unlikely, but we can fallback if needed.
-    // For now, if error, try finding by slug just in case.
     if (isUUID) {
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("archivos_apuntes")
-        .select(`
-          *,
-          perfiles!creador_id(nombre_completo, avatar_url, rol, apodo),
-          carpetas_apuntes(id, slug, materia_id, materias(id, nombre, semestre_id, codigo, slug, semestres(slug)))
-        `)
+        .select(selectQuery)
         .eq("slug", slugOrId)
         .single();
         
@@ -237,6 +233,46 @@ export async function getDocumentBySlugOrId(slugOrId: string): Promise<any> {
 
   return data;
 }
+
+// Get folder by slug or ID
+export async function getCarpetaBySlugOrId(slugOrId: string): Promise<any> {
+  const supabase = await createClient();
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
+  
+  const selectQuery = `
+    *,
+    materias(id, nombre, slug, semestres(slug, nombre)),
+    archivos_apuntes(id)
+  `;
+
+  let query = supabase
+    .from("carpetas_apuntes")
+    .select(selectQuery);
+
+  if (isUUID) {
+    query = query.eq("id", slugOrId);
+  } else {
+    query = query.eq("slug", slugOrId);
+  }
+
+  const { data, error } = await query.single();
+
+  if (error || !data) {
+    if (isUUID) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("carpetas_apuntes")
+        .select(selectQuery)
+        .eq("slug", slugOrId)
+        .single();
+        
+      if (!fallbackError && fallbackData) return fallbackData;
+    }
+    return null;
+  }
+
+  return data;
+}
+
 
 // Get all document slugs for sitemap
 export async function getAllDocumentSlugs(): Promise<{ slug: string; id: string; updated_at: string }[]> {
