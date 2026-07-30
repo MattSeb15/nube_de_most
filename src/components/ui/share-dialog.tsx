@@ -47,41 +47,22 @@ export function ShareDialog({ isOpen, onOpenChange, title = "Compartir", text = 
   const socialLinks = [
     {
       name: 'WhatsApp',
-      icon: (
-        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="size-6 text-[#25D366]">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-        </svg>
-      ),
+      icon: '/socials/whatsapp.svg',
       href: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareTitle + " " + shareUrl)}`
     },
     {
       name: 'X (Twitter)',
-      icon: (
-        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="size-6">
-          <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
-          <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
-        </svg>
-      ),
+      icon: '/socials/x.svg',
       href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`
     },
     {
       name: 'Facebook',
-      icon: (
-        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="size-6 text-[#1877F2]">
-          <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-        </svg>
-      ),
+      icon: '/socials/fb.svg',
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`
     },
     {
       name: 'LinkedIn',
-      icon: (
-        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="size-6 text-[#0A66C2]">
-          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
-          <rect x="2" y="9" width="4" height="12"></rect>
-          <circle cx="4" cy="4" r="2"></circle>
-        </svg>
-      ),
+      icon: '/socials/linkedin.svg',
       href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`
     }
   ];
@@ -105,8 +86,14 @@ export function ShareDialog({ isOpen, onOpenChange, title = "Compartir", text = 
                 className="flex flex-col items-center gap-2 group"
                 onClick={() => onOpenChange(false)}
               >
-                <div className="flex items-center justify-center size-14 rounded-full bg-neutral-100 dark:bg-neutral-800 transition-transform group-hover:scale-110 group-hover:bg-neutral-200 dark:group-hover:bg-neutral-700">
-                  {link.icon}
+                <div className="flex items-center justify-center size-14 rounded-full bg-neutral-100 dark:bg-neutral-800 transition-transform group-hover:scale-110 group-hover:bg-neutral-200 dark:group-hover:bg-neutral-700 overflow-hidden p-3">
+                  <img 
+                    src={link.icon} 
+                    alt={link.name} 
+                    className={`size-7 object-contain ${
+                      link.name.startsWith('X') ? 'dark:invert' : ''
+                    }`}
+                  />
                 </div>
                 <span className="text-xs font-medium text-center text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-100">{link.name}</span>
               </a>
