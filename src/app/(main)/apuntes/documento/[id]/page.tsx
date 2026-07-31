@@ -25,7 +25,9 @@ export async function generateMetadata({ params, searchParams }: PageProps, pare
   const materiaName = file.carpetas_apuntes?.materias?.nombre;
   
   // Calculate page count
-  const visiblePages = file.paginas_cuaderno?.filter((p: any) => !p.oculta) || [];
+  const visiblePages = (file.paginas_cuaderno || [])
+    .filter((p: any) => !p.oculta)
+    .sort((a: any, b: any) => (a.orden || 0) - (b.orden || 0));
   const numPages = visiblePages.length > 0 ? visiblePages.length : (file.paginas_cuaderno?.length || 0);
   const paginasInfo = numPages > 0 ? `${numPages} ${numPages === 1 ? 'página' : 'páginas'}` : '';
 
@@ -36,20 +38,26 @@ export async function generateMetadata({ params, searchParams }: PageProps, pare
   let description = `${file.nombre}${paginasInfo ? ` (${paginasInfo})` : ''}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
   let url = `/apuntes/documento/${file.slug || file.id}`;
 
+  const pageNum = typeof page === 'string' ? parseInt(page, 10) : undefined;
+
   if (page && typeof page === 'string') {
     title = `${file.nombre} - Página ${page}${numPages > 0 ? ` de ${numPages}` : ''}`;
     description = `Página ${page}${numPages > 0 ? ` de ${numPages}` : ''} de ${file.nombre}${materiaName ? ` — ${materiaName}` : ''} | Apunte en La Nube de Most`;
     url = `${url}?page=${page}`;
   }
 
-  // Determine OpenGraph image
-  const firstPageImg = visiblePages[0]?.url_imagen || file.paginas_cuaderno?.[0]?.url_imagen;
+  // Determine OpenGraph image for the specific page requested
+  const targetPageIndex = pageNum && !isNaN(pageNum) && pageNum > 0 ? pageNum - 1 : 0;
+  const targetPageImg = visiblePages[targetPageIndex]?.url_imagen
+    || visiblePages[0]?.url_imagen
+    || file.paginas_cuaderno?.[0]?.url_imagen;
+
   let ogImage = "/open_graphs/notebook.png";
 
   if (file.tipo === "pdf") {
-    ogImage = firstPageImg || "/open_graphs/pdf.png";
+    ogImage = targetPageImg || "/open_graphs/pdf.png";
   } else {
-    ogImage = firstPageImg || "/open_graphs/notebook.png";
+    ogImage = targetPageImg || "/open_graphs/notebook.png";
   }
 
   return {

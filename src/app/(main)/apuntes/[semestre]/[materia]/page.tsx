@@ -41,19 +41,34 @@ export async function generateMetadata(
   if (fileParam) {
     const doc = await getDocumentBySlugOrId(fileParam);
     if (doc) {
-      const visiblePages = doc.paginas_cuaderno?.filter((p: any) => !p.oculta) || [];
+      const visiblePages = (doc.paginas_cuaderno || [])
+        .filter((p: any) => !p.oculta)
+        .sort((a: any, b: any) => (a.orden || 0) - (b.orden || 0));
       const numPages = visiblePages.length > 0 ? visiblePages.length : (doc.paginas_cuaderno?.length || 0);
       const paginasInfo = numPages > 0 ? ` (${numPages} ${numPages === 1 ? 'página' : 'páginas'})` : '';
+
+      const pageParamStr = typeof sp.page === "string" ? sp.page : undefined;
+      const pageNum = pageParamStr ? parseInt(pageParamStr, 10) : undefined;
       
       title = `${doc.nombre}${paginasInfo} — ${materia.nombre}`;
       description = `Apunte "${doc.nombre}"${paginasInfo} en ${materia.nombre} (${semestre.nombre}) | La Nube de Most`;
       url = `${url}?${typeof sp.archivo === "string" ? 'archivo' : 'cuaderno'}=${fileParam}`;
 
-      const firstPageImg = visiblePages[0]?.url_imagen || doc.paginas_cuaderno?.[0]?.url_imagen;
+      if (pageParamStr) {
+        title = `${doc.nombre} - Página ${pageParamStr}${numPages > 0 ? ` de ${numPages}` : ''} — ${materia.nombre}`;
+        description = `Página ${pageParamStr}${numPages > 0 ? ` de ${numPages}` : ''} de ${doc.nombre} en ${materia.nombre} (${semestre.nombre}) | La Nube de Most`;
+        url = `${url}&page=${pageParamStr}`;
+      }
+
+      const targetPageIndex = pageNum && !isNaN(pageNum) && pageNum > 0 ? pageNum - 1 : 0;
+      const targetPageImg = visiblePages[targetPageIndex]?.url_imagen
+        || visiblePages[0]?.url_imagen
+        || doc.paginas_cuaderno?.[0]?.url_imagen;
+
       if (doc.tipo === "pdf") {
-        ogImage = firstPageImg || "/open_graphs/pdf.png";
+        ogImage = targetPageImg || "/open_graphs/pdf.png";
       } else {
-        ogImage = firstPageImg || "/open_graphs/notebook.png";
+        ogImage = targetPageImg || "/open_graphs/notebook.png";
       }
     }
   } else if (folderParam) {
