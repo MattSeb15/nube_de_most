@@ -198,3 +198,86 @@ export interface ColaboradorCarpeta {
   carpetaId: string;
   usuarioId: string;
 }
+
+// ============================================
+// Malla Curricular (Curriculum Graph)
+// ============================================
+
+export interface Carrera {
+  id: string;
+  nombre: string;
+  slug: string;
+  color?: string;
+  icono?: string;
+  descripcion?: string;
+  createdAt?: string;
+}
+
+// TipoMateria is defined below
+
+export interface MallaMetadata {
+  rowLabelFormat?: string;
+  columnLabels?: Record<number, string>;
+  customTypes?: { id: string; label: string; color: string; textColor?: string }[];
+}
+
+export interface Malla {
+  id: string;
+  carreraId: string;
+  carreraNombre?: string;
+  nombre: string;
+  slug: string;
+  descripcion?: string;
+  pensum: string;
+  activo: boolean;
+  metadata?: MallaMetadata;
+  createdAt?: string;
+  updatedAt?: string;
+  materiasCount?: number;
+}
+
+export type TipoMateria = 'basica' | 'profesional' | 'integracion' | 'ninguno' | string;
+
+export interface MallaMateria {
+  id: string;
+  mallaId: string;
+  materiaId: string;
+  semester: number;
+  mapColumn: number;
+  tipoMateria: TipoMateria;
+  prerequisites: string[];
+  corequisites: string[];
+  materia?: Materia;
+}
+
+export interface SubjectNodeData {
+  // Materia identity
+  label: string;
+  code: string;
+  color: string;
+  icono: string;
+  profesorNombre?: string;
+  apuntesCount: number;
+  creditos: number;
+  horas: number;
+  // Malla position
+  type: TipoMateria;
+  customTypeData?: { label: string; color: string; textColor?: string };
+  semester: number;
+  column: number;
+  // Highlight state
+  isHighlighted?: boolean;
+  isDimmed?: boolean;
+  isIndirect?: boolean;
+  isSearchMatch?: boolean;
+  highlightType?: 'selected' | 'prereq' | 'successor' | 'coreq';
+  // Navigation
+  slug: string;
+  semestreSlug: string;
+  carreraSlug: string;
+  // Relationships
+  prerequisites?: string[];
+  corequisites?: string[];
+  uuid?: string;
+  materia?: Materia;
+}

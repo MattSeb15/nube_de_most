@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 interface PageProps {
-  params: Promise<{ semestre: string; materia: string }>;
+  params: Promise<{ carrera: string; semestre: string; materia: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
@@ -29,13 +29,13 @@ export async function generateMetadata(
   { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const { semestre: semestreSlug, materia: materiaSlug } = await params;
+  const { carrera: carreraSlug, semestre: semestreSlug, materia: materiaSlug } = await params;
   const semestre = await getSemestreBySlug(semestreSlug);
   const materia = await getMateriaBySlug(materiaSlug);
   if (!semestre || !materia) return { title: "Materia no encontrada" };
   const title = `${materia.nombre} — ${semestre.nombre}`;
   const description = materia.descripcion || `Apuntes y recursos de ${materia.nombre} para el ${semestre.nombre}.`;
-  const url = `/apuntes/${semestreSlug}/${materiaSlug}`;
+  const url = `/${carreraSlug}/apuntes/${semestreSlug}/${materiaSlug}`;
   
   const previousImages = (await parent).openGraph?.images || [];
   
@@ -65,7 +65,7 @@ import { TrackVisit } from "@/components/ui/TrackVisit";
 import { FloatingBreadcrumbs } from "@/components/ui/floating-breadcrumbs";
 
 export default async function MateriaPage({ params, searchParams }: PageProps) {
-  const { semestre: semestreSlug, materia: materiaSlug } = await params;
+  const { carrera: carreraSlug, semestre: semestreSlug, materia: materiaSlug } = await params;
   const semestre = await getSemestreBySlug(semestreSlug);
   if (!semestre) notFound();
 
@@ -84,11 +84,13 @@ export default async function MateriaPage({ params, searchParams }: PageProps) {
     <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <TrackVisit entidadId={materia.id} tipoEntidad="materia" />
       {/* Breadcrumb */}
-      <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground animate-fade-in font-medium">
-        <Link href="/apuntes" className="transition-colors hover:text-primary">Apuntes</Link>
-        <ChevronRight className="w-4 h-4" />
-        <Link href={`/apuntes/${semestreSlug}`} className="transition-colors hover:text-primary">{semestre.nombre}</Link>
-        <ChevronRight className="w-4 h-4" />
+      <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground animate-fade-in font-medium overflow-x-auto whitespace-nowrap pb-2">
+        <Link href="/apuntes" className="transition-colors hover:text-primary">Carreras</Link>
+        <ChevronRight className="w-4 h-4 shrink-0" />
+        <Link href={`/${carreraSlug}/apuntes`} className="transition-colors hover:text-primary">Apuntes</Link>
+        <ChevronRight className="w-4 h-4 shrink-0" />
+        <Link href={`/${carreraSlug}/apuntes/${semestreSlug}`} className="transition-colors hover:text-primary">{semestre.nombre}</Link>
+        <ChevronRight className="w-4 h-4 shrink-0" />
         <span className="text-foreground">{materia.nombre}</span>
       </nav>
 

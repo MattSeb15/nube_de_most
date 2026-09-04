@@ -6,21 +6,20 @@ export const dynamic = "force-dynamic";
 
 import { getSemestreBySlug, getMateriasBySemestre } from "@/lib/academic";
 import { MateriaCard } from "@/components/apuntes/MateriaCard";
-import { FloatingBreadcrumbs } from "@/components/ui/floating-breadcrumbs";
 
 interface PageProps {
-  params: Promise<{ semestre: string }>;
+  params: Promise<{ carrera: string; semestre: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { semestre: semestreSlug } = await params;
+  const { carrera: carreraSlug, semestre: semestreSlug } = await params;
   const semestre = await getSemestreBySlug(semestreSlug);
   if (!semestre) return { title: "Semestre no encontrado" };
   const title = `${semestre.nombre} | Apuntes`;
   const description = `Explora los recursos y materias del ${semestre.nombre} (${semestre.periodo}) en La Nube de Most.`;
-  const url = `/apuntes/${semestreSlug}`;
+  const url = `/${carreraSlug}/apuntes/${semestreSlug}`;
   return {
     title,
     description,
@@ -34,7 +33,7 @@ export async function generateMetadata({
 }
 
 export default async function SemestrePage({ params }: PageProps) {
-  const { semestre: semestreSlug } = await params;
+  const { carrera: carreraSlug, semestre: semestreSlug } = await params;
   const semestre = await getSemestreBySlug(semestreSlug);
   if (!semestre) notFound();
 
@@ -46,6 +45,13 @@ export default async function SemestrePage({ params }: PageProps) {
       <nav className="mb-8 flex items-center gap-1.5 text-sm text-muted-foreground animate-fade-in">
         <Link
           href="/apuntes"
+          className="transition-colors hover:text-foreground"
+        >
+          Carreras
+        </Link>
+        <span>/</span>
+        <Link
+          href={`/${carreraSlug}/apuntes`}
           className="transition-colors hover:text-foreground"
         >
           Apuntes
@@ -70,12 +76,12 @@ export default async function SemestrePage({ params }: PageProps) {
           </p>
         </div>
       ) : (
-        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 animate-fade-in">
           {materiasList.map((materia, i) => (
             <MateriaCard
               key={materia.id}
               materia={materia}
-              href={`/apuntes/${semestreSlug}/${materia.slug}`}
+              href={`/${carreraSlug}/apuntes/${semestreSlug}/${materia.slug}`}
               index={i}
             />
           ))}

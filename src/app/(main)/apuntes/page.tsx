@@ -1,113 +1,68 @@
-import type { Metadata } from "next";
+import { getCarreras } from "@/lib/academic";
 import Link from "next/link";
-import { getSemestres } from "@/lib/academic";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronRight } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Apuntes",
-  description:
-    "Explora los apuntes organizados por semestre y materia en La Nube de Most.",
-  alternates: {
-    canonical: "/apuntes",
-  },
-  openGraph: {
-    title: "Apuntes | La Nube de Most",
-    description: "Explora los apuntes organizados por semestre y materia en La Nube de Most.",
-    url: "/apuntes",
-  },
+export const metadata = {
+  title: "Selecciona una Carrera | La Nube de Most",
+  description: "Selecciona tu carrera para ver los apuntes y la malla curricular.",
 };
 
-export default async function ApuntesPage() {
-  const semestres = await getSemestres();
+export const revalidate = 3600;
+
+export default async function CarrerasSelectorPage() {
+  const carreras = await getCarreras();
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      {/* Header */}
-      <section className="mb-10 animate-fade-in">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Apuntes
+    <div className="container mx-auto max-w-5xl py-16 px-4 sm:px-6 lg:px-8 min-h-[60vh] flex flex-col justify-center">
+      <div className="mb-16 text-center animate-fade-in">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl mb-4">
+          Selecciona tu Carrera
         </h1>
-        <p className="mt-2 text-muted-foreground">
-          Explora los apuntes organizados por semestre y materia
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Elige tu carrera para explorar su malla curricular interactiva y acceder a los apuntes de la comunidad.
         </p>
-      </section>
+      </div>
 
-      {/* Semestres Grid */}
-      <section className="grid gap-6 sm:grid-cols-2">
-        {semestres.map((semestre, i) => (
-          <Link
-            key={semestre.id}
-            href={`/apuntes/${semestre.slug}`}
-            className={`animate-fade-in stagger-${i + 1} group/link block outline-none`}
-          >
-            <Card className="relative h-full overflow-hidden border border-border/40 bg-card/40 backdrop-blur-xl p-5 sm:p-7 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1.5 group rounded-[1.5rem]">
-              {/* Efectos de fondo dinámicos */}
-              <div className="absolute -inset-0.5 bg-gradient-to-br from-primary/20 via-transparent to-primary/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 blur-2xl z-0" />
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-0" />
-              
-              <div className="relative z-10 flex flex-col h-full gap-5 sm:gap-6">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="flex flex-col">
-                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">
-                      {semestre.nombre}
-                    </h3>
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-0.5">
-                      {semestre.periodo || "Periodo no definido"}
-                    </p>
-                  </div>
-                  <div className="self-start sm:self-auto">
-                    {semestre.activo ? (
-                      <Badge variant="default" className="shadow-sm shadow-primary/30 bg-primary hover:bg-primary/90 px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-bold rounded-full transition-transform hover:scale-105">
-                        Semestre Actual
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="px-3 py-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-semibold rounded-full bg-secondary/50 text-secondary-foreground/70 backdrop-blur-sm transition-colors hover:bg-secondary/70">
-                        Próximo
-                      </Badge>
-                    )}
-                  </div>
+      {carreras.length === 0 ? (
+        <div className="text-center py-20 bg-card/30 rounded-2xl border border-border/50 animate-fade-in">
+          <BookOpen className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-foreground">No hay carreras disponibles</h3>
+          <p className="text-muted-foreground mt-2">Pronto añadiremos nuevas carreras.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+          {carreras.map((carrera) => (
+            <Link
+              key={carrera.id}
+              href={`/${carrera.slug}/apuntes`}
+              className="group relative flex flex-col p-7 rounded-2xl border border-border/40 bg-card/30 hover:bg-card/80 transition-all duration-300 hover:shadow-sm hover:border-border"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-2.5 h-2.5 rounded-full shadow-sm"
+                    style={{ backgroundColor: carrera.color || "#3b82f6" }}
+                  />
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Carrera
+                  </span>
                 </div>
-
-                <div className="mt-auto pt-5 border-t border-border/40 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 flex-1">
-                    {semestre.materiasList && semestre.materiasList.length > 0 ? (
-                      semestre.materiasList.map((m) => (
-                        <div
-                          key={m.id}
-                          className="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-full border shadow-sm transition-all duration-300 hover:brightness-110 hover:scale-105"
-                          style={{
-                            backgroundColor: `${m.color}15`,
-                            color: m.color,
-                            borderColor: `${m.color}30`,
-                          }}
-                          title={m.nombre}
-                        >
-                          {m.nombre}
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-xs font-medium text-muted-foreground italic opacity-70">
-                        Sin materias registradas
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center text-xs sm:text-sm font-bold text-primary opacity-100 sm:opacity-0 sm:-translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 shrink-0 self-end sm:self-auto">
-                    Explorar <ChevronRight className="ml-1 size-4 sm:size-5 transition-transform duration-300 group-hover:translate-x-1.5" />
-                  </div>
-                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-foreground transition-transform group-hover:translate-x-1" />
               </div>
-            </Card>
-          </Link>
-        ))}
-      </section>
-    </main>
+              
+              <div className="mt-auto">
+                <h3 className="text-xl font-semibold text-foreground tracking-tight mb-2">
+                  {carrera.nombre}
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {carrera.descripcion || "Explora las materias y apuntes disponibles"}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

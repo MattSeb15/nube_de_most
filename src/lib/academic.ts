@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { Semestre, Materia, Apunte, Actividad, Comentario, PerfilUsuario, Profesor, VisibilidadArchivo } from "@/types";
+import { Semestre, Materia, Apunte, Actividad, Comentario, PerfilUsuario, Profesor, VisibilidadArchivo, Malla, MallaMateria, TipoMateria, Carrera } from "@/types";
 import { formatPeriodo } from "@/lib/utils";
 
 // Helper to get total apuntes (archivos) count for multiple materias
@@ -767,3 +767,346 @@ export async function getAllProfesores(): Promise<{ id: string }[]> {
   if (error) return [];
   return data || [];
 }
+
+// ── MALLA CURRICULAR ──
+
+// Helper to map raw DB malla_materias rows to MallaMateria[]
+function mapMallaMateria(row: any): MallaMateria {
+  return {
+    id: row.id,
+    mallaId: row.malla_id,
+    materiaId: row.materia_id,
+    semester: row.semester,
+    mapColumn: row.map_column,
+    tipoMateria: row.tipo_materia as TipoMateria,
+    prerequisites: row.prerequisites || [],
+    corequisites: row.corequisites || [],
+    materia: row.materias ? {
+      id: row.materias.id,
+      nombre: row.materias.nombre,
+      slug: row.materias.slug,
+      semestreId: row.materias.semestre_id,
+      codigo: row.materias.codigo,
+      color: row.materias.color,
+      icono: row.materias.icono,
+      apuntesCount: 0,
+      vistasCount: row.materias.vistas || 0,
+      descripcion: row.materias.descripcion,
+      profesorId: row.materias.profesor_id,
+      profesorNombre: row.materias.profesores?.nombre,
+    } : undefined,
+  };
+}
+
+// Get all carreras
+export async function getCarreras(): Promise<Carrera[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("carreras")
+    .select("*")
+    .order("nombre", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching carreras:", error.message);
+    return [];
+  }
+
+  return data.map((c: any) => ({
+    id: c.id,
+    nombre: c.nombre,
+    slug: c.slug,
+    color: c.color,
+    icono: c.icono,
+    descripcion: c.descripcion,
+    createdAt: c.created_at,
+  }));
+}
+
+// Get the active malla with all its materias (enriched)
+export async function getActiveMalla(carreraSlug: string): Promise<{ malla: Malla; materias: MallaMateria[] } | null> {
+  const supabase = await createClient();
+
+  // Find the active malla for the given carrera
+  const { data: carreraData } = await supabase.from("carreras").select("id").eq("slug", carreraSlug).single();
+  if (!carreraData) return null;
+
+  const { data: mallaData, error: mallaError } = await supabase
+    .from("mallas")
+    .select("*")
+    .eq("activo", true)
+    .eq("carrera_id", carreraData.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (mallaError || !mallaData) return null;
+
+  // Get malla_materias with materia data joined
+  const { data: mmData, error: mmError } = await supabase
+    .from("malla_materias")
+    .select("*, materias(*, profesores(nombre))")
+    .eq("malla_id", mallaData.id)
+    .order("semester", { ascending: true });
+
+  if (mmError) return null;
+
+  // Get apuntes counts for all materias in this malla
+  const materiaIds = (mmData || []).map((mm: any) => mm.materia_id);
+  const counts = await getApuntesCounts(supabase, materiaIds);
+
+  const materias: MallaMateria[] = (mmData || []).map((row: any) => {
+    const mm = mapMallaMateria(row);
+    if (mm.materia) {
+      mm.materia.apuntesCount = counts[mm.materiaId] || 0;
+    }
+    return mm;
+  });
+
+  return {
+    malla: {
+      id: mallaData.id,
+      carreraId: mallaData.carrera_id,
+      nombre: mallaData.nombre,
+      slug: mallaData.slug,
+      descripcion: mallaData.descripcion,
+      pensum: mallaData.pensum,
+      activo: mallaData.activo,
+      metadata: mallaData.metadata,
+      createdAt: mallaData.created_at,
+      updatedAt: mallaData.updated_at,
+      materiasCount: materias.length,
+    },
+    materias,
+  };
+}
+
+// Get a malla by ID
+export async function getMallaById(id: string): Promise<{ malla: Malla; materias: MallaMateria[] } | null> {
+  const supabase = await createClient();
+
+  const { data: mallaData, error: mallaError } = await supabase
+    .from("mallas")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (mallaError || !mallaData) return null;
+
+  const { data: mmData } = await supabase
+    .from("malla_materias")
+    .select("*, materias(*, profesores(nombre))")
+    .eq("malla_id", id)
+    .order("semester", { ascending: true });
+
+  const materiaIds = (mmData || []).map((mm: any) => mm.materia_id);
+  const counts = await getApuntesCounts(supabase, materiaIds);
+
+  const materias: MallaMateria[] = (mmData || []).map((row: any) => {
+    const mm = mapMallaMateria(row);
+    if (mm.materia) mm.materia.apuntesCount = counts[mm.materiaId] || 0;
+    return mm;
+  });
+
+  return {
+    malla: {
+      id: mallaData.id,
+      carreraId: mallaData.carrera_id,
+      nombre: mallaData.nombre,
+      slug: mallaData.slug,
+      descripcion: mallaData.descripcion,
+      pensum: mallaData.pensum,
+      activo: mallaData.activo,
+      metadata: mallaData.metadata,
+      createdAt: mallaData.created_at,
+      updatedAt: mallaData.updated_at,
+      materiasCount: materias.length,
+    },
+    materias,
+  };
+}
+
+// Get a malla by slug
+export async function getMallaBySlug(slug: string): Promise<{ malla: Malla; materias: MallaMateria[] } | null> {
+  const supabase = await createClient();
+
+  const { data: mallaData, error: mallaError } = await supabase
+    .from("mallas")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (mallaError || !mallaData) return null;
+
+  const { data: mmData } = await supabase
+    .from("malla_materias")
+    .select("*, materias(*, profesores(nombre))")
+    .eq("malla_id", mallaData.id)
+    .order("semester", { ascending: true });
+
+  const materiaIds = (mmData || []).map((mm: any) => mm.materia_id);
+  const counts = await getApuntesCounts(supabase, materiaIds);
+
+  const materias: MallaMateria[] = (mmData || []).map((row: any) => {
+    const mm = mapMallaMateria(row);
+    if (mm.materia) mm.materia.apuntesCount = counts[mm.materiaId] || 0;
+    return mm;
+  });
+
+  return {
+    malla: {
+      id: mallaData.id,
+      carreraId: mallaData.carrera_id,
+      nombre: mallaData.nombre,
+      slug: mallaData.slug,
+      descripcion: mallaData.descripcion,
+      pensum: mallaData.pensum,
+      activo: mallaData.activo,
+      metadata: mallaData.metadata,
+      createdAt: mallaData.created_at,
+      updatedAt: mallaData.updated_at,
+      materiasCount: materias.length,
+    },
+    materias,
+  };
+}
+
+// Get all mallas (for admin listing)
+export async function getMallas(): Promise<Malla[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("mallas")
+    .select("*, malla_materias(count)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching mallas:", error.message);
+    return [];
+  }
+
+  return data.map((m: any) => ({
+    id: m.id,
+    carreraId: m.carrera_id,
+    nombre: m.nombre,
+    slug: m.slug,
+    descripcion: m.descripcion,
+    pensum: m.pensum,
+    activo: m.activo,
+    metadata: m.metadata,
+    createdAt: m.created_at,
+    updatedAt: m.updated_at,
+    materiasCount: m.malla_materias?.[0]?.count || 0,
+  }));
+}
+
+// Save malla subjects (batch upsert positions and relationships)
+export async function saveMallaSubjects(
+  mallaId: string,
+  subjects: {
+    materiaId: string;
+    semester: number;
+    mapColumn: number;
+    tipoMateria: TipoMateria;
+    prerequisites: string[];
+    corequisites: string[];
+  }[]
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  // Delete existing entries for this malla
+  const { error: deleteError } = await supabase
+    .from("malla_materias")
+    .delete()
+    .eq("malla_id", mallaId);
+
+  if (deleteError) {
+    console.error("Error deleting old malla_materias:", deleteError.message);
+    return false;
+  }
+
+  if (subjects.length === 0) return true;
+
+  // Insert new entries
+  const rows = subjects.map((s) => ({
+    malla_id: mallaId,
+    materia_id: s.materiaId,
+    semester: s.semester,
+    map_column: s.mapColumn,
+    tipo_materia: s.tipoMateria,
+    prerequisites: s.prerequisites,
+    corequisites: s.corequisites,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("malla_materias")
+    .insert(rows);
+
+  if (insertError) {
+    console.error("Error inserting malla_materias:", insertError.message);
+    return false;
+  }
+
+  // Update malla timestamp
+  await supabase
+    .from("mallas")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", mallaId);
+
+  return true;
+}
+
+// Create a new malla
+export async function createMalla(malla: { carreraId: string; nombre: string; slug: string; descripcion?: string; pensum?: string; metadata?: any }): Promise<Malla | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("mallas")
+    .insert([{
+      carrera_id: malla.carreraId,
+      nombre: malla.nombre,
+      slug: malla.slug,
+      descripcion: malla.descripcion || null,
+      pensum: malla.pensum || '2026',
+      metadata: malla.metadata || {},
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating malla:", error.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    carreraId: data.carrera_id,
+    nombre: data.nombre,
+    slug: data.slug,
+    descripcion: data.descripcion,
+    pensum: data.pensum,
+    activo: data.activo,
+    metadata: data.metadata,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
+// Update malla metadata
+export async function updateMalla(id: string, updates: Partial<{ carrera_id: string; nombre: string; slug: string; descripcion: string; pensum: string; activo: boolean; metadata: any }>): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("mallas")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  return !error;
+}
+
+// Delete a malla
+export async function deleteMalla(id: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("mallas")
+    .delete()
+    .eq("id", id);
+  return !error;
+}
+

@@ -11,6 +11,7 @@ import { cn, formatPeriodo } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AdminApuntesPanel } from "@/components/admin/AdminApuntesPanel";
+import { CarrerasAdminTab } from "@/components/admin/CarrerasAdminTab";
 import { Button } from "@/components/ui/button";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import {
@@ -30,7 +31,7 @@ import {
   AlertCircle,
   Loader2,
   ArrowLeft,
-  Settings,
+  Settings, GraduationCap,
   Plus,
   Edit2,
   Save,
@@ -48,6 +49,7 @@ import {
   Music,
   ChevronRight,
   Home,
+  GitBranch,
 } from "lucide-react";
 
 // ── Custom SVG Brand Icons (Filled/Solid Styles) ──
@@ -163,7 +165,7 @@ function AdminDashboardContent() {
   // Active section tab using URL
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab = (tabParam as "dashboard" | "students" | "notes" | "activities" | "sobremi" | "comments" | "nube" | "roadmap") || "dashboard";
+  const activeTab = (tabParam as "dashboard" | "students" | "notes" | "activities" | "sobremi" | "comments" | "nube" | "roadmap" | "carreras") || "dashboard";
 
   function handleTabChange(tab: string) {
     setEditingItem(null);
@@ -174,6 +176,7 @@ function AdminDashboardContent() {
   const [loadingData, setLoadingData] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
+  const [totalApuntesCount, setTotalApuntesCount] = useState<number>(0);
   const [activities, setActivities] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   
@@ -413,6 +416,10 @@ function AdminDashboardContent() {
         .order("nombre_completo", { ascending: true });
       setStudents(profilesData || []);
 
+      const { count: apuntesCount } = await supabase
+        .from("archivos_apuntes")
+        .select("*", { count: "exact", head: true });
+      setTotalApuntesCount(apuntesCount || 0);
       setNotes([]);
 
       const { data: activitiesData } = await supabase
@@ -1227,7 +1234,7 @@ function AdminDashboardContent() {
               )}
             >
               <BookOpen className="size-4" />
-              <span>Apuntes ({notes.length})</span>
+              <span>Apuntes ({totalApuntesCount})</span>
             </button>
 
             <button
@@ -1294,6 +1301,27 @@ function AdminDashboardContent() {
               <MessageSquare className="size-4" />
               <span>Comentarios ({comments.length})</span>
             </button>
+
+            <div
+              onClick={() => handleTabChange("carreras")}
+              className={cn(
+                "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 cursor-pointer",
+                activeTab === "carreras"
+                  ? "bg-primary text-white shadow-lg shadow-primary/10"
+                  : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
+              )}
+            >
+              <GraduationCap className="size-4" />
+              <span>Carreras</span>
+            </div>
+
+            <Link
+              href="/admin/mallas"
+              className="w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 cursor-pointer text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
+            >
+              <GitBranch className="size-4" />
+              <span>Mallas Curriculares</span>
+            </Link>
           </nav>
         </div>
 
@@ -1322,6 +1350,7 @@ function AdminDashboardContent() {
               {activeTab === "sobremi" && "Editor del Perfil 'Sobre Mí'"}
               {activeTab === "nube" && "La Nube (Storage)"}
               {activeTab === "comments" && "Moderación de Comentarios"}
+                {activeTab === "carreras" && "Gestión de Carreras"}
             </h2>
             <p className="text-[10px] text-neutral-500 mt-0.5">
               Consola administrativa • Sincronización real con Supabase
@@ -1409,7 +1438,7 @@ function AdminDashboardContent() {
                   <div className="p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 bg-white dark:bg-neutral-900/20 flex items-center justify-between shadow-sm">
                     <div className="space-y-1">
                       <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Apuntes</span>
-                      <h3 className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-white">{notes.length}</h3>
+                      <h3 className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-white">{totalApuntesCount}</h3>
                     </div>
                     <div className="size-9 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                       <BookOpen className="size-4.5" />
@@ -1418,13 +1447,13 @@ function AdminDashboardContent() {
 
                   <div className="p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 bg-white dark:bg-neutral-900/20 flex items-center justify-between shadow-sm">
                     <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Moderados / Bloqueados</span>
+                      <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Materias</span>
                       <h3 className="text-2xl font-bold font-mono tracking-tight text-neutral-900 dark:text-white">
-                        {notes.filter(n => n.bloqueado).length}
+                        {materiasList.length}
                       </h3>
                     </div>
-                    <div className="size-9 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                      <Lock className="size-4.5" />
+                    <div className="size-9 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                      <Settings className="size-4.5" />
                     </div>
                   </div>
                 </div>
@@ -1539,7 +1568,7 @@ function AdminDashboardContent() {
                           )}
                         >
                           <BookOpen className="size-3.5" />
-                          Apuntes ({notes.length})
+                          Apuntes ({totalApuntesCount})
                         </button>
                         <button
                           onClick={() => setNotesSubTab("materias")}
@@ -1582,7 +1611,7 @@ function AdminDashboardContent() {
                       {/* SUB-TAB CONTENTS */}
                       {notesSubTab === "notes" && (
                         <div className="bg-white dark:bg-neutral-900/10 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 p-6">
-                          <AdminApuntesPanel />
+                          <AdminApuntesPanel onCountChange={loadAllData} />
                         </div>
                       )}
 
@@ -3109,7 +3138,12 @@ function AdminDashboardContent() {
               )}
 
               {/* ── 6. COMMENTS VIEW ── */}
-              {activeTab === "comments" && (
+              {activeTab === "carreras" && (
+                  <CarrerasAdminTab />
+                )}
+
+                {/* ── 6. COMMENTS VIEW ── */}
+                {activeTab === "comments" && (
                 <div className="space-y-4 animate-scale-in">
                   <div className="relative max-w-md">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-neutral-500" />

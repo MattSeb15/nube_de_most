@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { getPerfilMost } from "@/lib/academic";
+import { MostBuiltBy } from "./most-built-by";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -76,6 +77,7 @@ export async function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border/30 pt-8 sm:flex-row text-sm font-medium text-muted-foreground">
           <p className="tracking-tight mx-auto sm:mx-0">© 2026 La Nube de Most. Todos los derechos reservados.</p>
+          <MostBuiltBy />
         </div>
       </div>
     </footer>

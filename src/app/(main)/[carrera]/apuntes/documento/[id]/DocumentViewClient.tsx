@@ -5,7 +5,7 @@ import { VisorPDF } from "@/components/apuntes/VisorPDF";
 import { VisorCuaderno } from "@/components/apuntes/VisorCuaderno";
 import { Download, ThumbsUp, ThumbsDown, Bookmark, Share, MoreHorizontal, FileText, Users, ArrowLeft, Eye } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -37,6 +37,8 @@ export default function DocumentViewClient({
   initialIsSaved?: boolean
 }) {
   const router = useRouter();
+  const params = useParams();
+  const carreraSlug = (params?.carrera as string) || 'software';
   const searchParams = useSearchParams();
   const pageParam = searchParams?.get("page");
   const [isScrolled, setIsScrolled] = useState(false);
@@ -103,9 +105,9 @@ export default function DocumentViewClient({
     if (!error) {
       const materia = file.carpetas_apuntes?.materias;
       if (materia) {
-        router.push(`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`);
+        router.push(`/${carreraSlug}/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`);
       } else {
-        router.push("/apuntes");
+        router.push(`/${carreraSlug}/apuntes`);
       }
     } else {
       setIsSavingActions(false);
@@ -456,7 +458,7 @@ export default function DocumentViewClient({
               </h2>
               <div className={cn("flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs mt-0.5 min-w-0 w-full overflow-hidden", textMuted)}>
                 {materia && (
-                  <Link href={`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className="truncate font-medium hover:text-white hover:underline transition-colors shrink min-w-0">
+                  <Link href={`/${carreraSlug}/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className="truncate font-medium hover:text-white hover:underline transition-colors shrink min-w-0">
                     {materia.nombre}
                   </Link>
                 )}
@@ -532,7 +534,7 @@ export default function DocumentViewClient({
               {materia && (
                 <div className="flex items-center gap-1.5">
                   <span>Materia:</span>
-                  <Link href={`/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className={textLink}>
+                  <Link href={`/${carreraSlug}/apuntes/${materia.semestres?.slug || materia.semestre_id}/${materia.slug || materia.id}`} className={textLink}>
                     {materia.nombre}
                   </Link>
                 </div>
