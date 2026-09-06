@@ -215,10 +215,27 @@ export interface Carrera {
 
 // TipoMateria is defined below
 
+export interface MallaSection {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  bgColor?: string;
+  borderColor?: string;
+  rowLabelFormat?: string;
+  semesterLabels?: Record<number, string>;
+  columnLabels?: Record<number, string>;
+  totalSemesters?: number;
+  totalColumns?: number;
+  order?: number;
+  prerequisiteSectionIds?: string[];
+}
+
 export interface MallaMetadata {
   rowLabelFormat?: string;
   columnLabels?: Record<number, string>;
   customTypes?: { id: string; label: string; color: string; textColor?: string }[];
+  sections?: MallaSection[];
+  defaultBgColor?: string;
 }
 
 export interface Malla {
@@ -242,6 +259,7 @@ export interface MallaMateria {
   id: string;
   mallaId: string;
   materiaId: string;
+  sectionId?: string;
   semester: number;
   mapColumn: number;
   tipoMateria: TipoMateria;
@@ -263,6 +281,7 @@ export interface SubjectNodeData {
   // Malla position
   type: TipoMateria;
   customTypeData?: { label: string; color: string; textColor?: string };
+  sectionId?: string;
   semester: number;
   column: number;
   // Highlight state
@@ -271,6 +290,8 @@ export interface SubjectNodeData {
   isIndirect?: boolean;
   isSearchMatch?: boolean;
   highlightType?: 'selected' | 'prereq' | 'successor' | 'coreq';
+  showOnlyConnectedHandles?: boolean;
+  isInteractiveViewer?: boolean;
   // Navigation
   slug: string;
   semestreSlug: string;

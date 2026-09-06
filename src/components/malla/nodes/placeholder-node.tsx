@@ -18,8 +18,8 @@ export interface PlaceholderNodeData {
 export const PlaceholderNode = memo(({ data }: NodeProps<PlaceholderNodeData>) => {
   return (
     <>
-      <Handle type="target" position={Position.Top} className="opacity-0" />
-      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      <Handle type="target" position={Position.Top} className="opacity-0" style={{ opacity: 0, pointerEvents: "none" }} />
+      <Handle type="source" position={Position.Bottom} className="opacity-0" style={{ opacity: 0, pointerEvents: "none" }} />
       
       <div className={cn(
         "relative flex flex-col items-center justify-center w-[155px] h-[165px] rounded-xl border-2 border-dashed transition-all duration-200 group",

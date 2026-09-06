@@ -776,6 +776,7 @@ function mapMallaMateria(row: any): MallaMateria {
     id: row.id,
     mallaId: row.malla_id,
     materiaId: row.materia_id,
+    sectionId: row.section_id || 'default',
     semester: row.semester,
     mapColumn: row.map_column,
     tipoMateria: row.tipo_materia as TipoMateria,
@@ -1004,6 +1005,7 @@ export async function saveMallaSubjects(
   mallaId: string,
   subjects: {
     materiaId: string;
+    sectionId?: string;
     semester: number;
     mapColumn: number;
     tipoMateria: TipoMateria;
@@ -1030,6 +1032,7 @@ export async function saveMallaSubjects(
   const rows = subjects.map((s) => ({
     malla_id: mallaId,
     materia_id: s.materiaId,
+    section_id: s.sectionId || 'default',
     semester: s.semester,
     map_column: s.mapColumn,
     tipo_materia: s.tipoMateria,

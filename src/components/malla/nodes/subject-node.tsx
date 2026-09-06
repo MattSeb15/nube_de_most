@@ -1,15 +1,14 @@
 "use client";
 import React from 'react';
 
-import { memo } from "react";
-import { Handle, Position, NodeProps } from "reactflow";
+import { memo, useMemo, useState, useEffect } from "react";
+import { Handle, Position, NodeProps, useEdges } from "reactflow";
 import { SubjectNodeData } from "@/types";
 import { cn } from "@/lib/utils";
 import { ExternalLink, BookOpen, Clock, Bookmark, ThumbsUp, ThumbsDown } from "lucide-react";
 import Link from "next/link";
 import { MateriaIcon } from "@/components/ui/materia-icon";
 import { getMateriaInteraction, toggleLikeDislikeMateria, toggleSaveMateria } from "@/app/(main)/materias/acciones";
-import { useState, useEffect } from "react";
 
 const DEFAULT_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   basica: { bg: "#f59e0b", text: "#451a03" },
@@ -132,8 +131,36 @@ function FloatingInteractions({ materiaId }: { materiaId: string }) {
   );
 }
 
-export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>) => {
-    const highlightRing = cn({
+export const SubjectNode = memo(({ id, data, selected, isConnectable }: NodeProps<SubjectNodeData>) => {
+  const edges = useEdges();
+
+  const connectedHandles = useMemo(() => {
+    const set = new Set<string>();
+    if (!edges || !id) return set;
+    for (const edge of edges) {
+      if (edge.source === id) {
+        if (edge.sourceHandle) {
+          set.add(edge.sourceHandle);
+        } else {
+          set.add("bottom-source");
+        }
+      }
+      if (edge.target === id) {
+        if (edge.targetHandle) {
+          set.add(edge.targetHandle);
+        } else {
+          set.add("top-target");
+        }
+      }
+    }
+    return set;
+  }, [edges, id]);
+
+  const showOnlyConnected = isConnectable === false || !!data.isInteractiveViewer || !!data.showOnlyConnectedHandles;
+  const isTopConnected = connectedHandles.has("top-target");
+  const isBottomConnected = connectedHandles.has("bottom-source");
+
+  const highlightRing = cn({
     "ring-2 ring-primary ring-offset-2": selected,
     "ring-2 ring-red-500 ring-offset-2": data.highlightType === "prereq",
     "ring-2 ring-blue-500 ring-offset-2": data.highlightType === "successor",
@@ -157,6 +184,10 @@ export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>)
         type="target"
         position={Position.Top}
         id="top-target"
+        style={{
+          opacity: (!showOnlyConnected || isTopConnected) ? (data.isDimmed ? 0.25 : 1) : 0,
+          pointerEvents: (!showOnlyConnected || isTopConnected) ? "auto" : "none",
+        }}
         className={cn(
           "w-12 h-1.5 rounded-sm border-none transition-colors",
           selected || data.isHighlighted ? "!bg-primary" : "!bg-slate-300 dark:!bg-slate-600 hover:!bg-primary"
@@ -168,7 +199,11 @@ export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>)
         type="target"
         position={Position.Left}
         id="left-target"
-        style={{ top: "50%" }}
+        style={{
+          top: "50%",
+          opacity: (!showOnlyConnected || connectedHandles.has("left-target")) ? (data.isDimmed ? 0.25 : 1) : 0,
+          pointerEvents: (!showOnlyConnected || connectedHandles.has("left-target")) ? "auto" : "none",
+        }}
         className={cn(
           "w-1.5 h-8 rounded-sm border-none transition-colors",
           selected || data.isHighlighted ? "!bg-amber-500" : "!bg-amber-300 dark:!bg-amber-600/70 hover:!bg-amber-500"
@@ -178,15 +213,26 @@ export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>)
         type="source"
         position={Position.Left}
         id="left-source"
-        style={{ top: "50%", opacity: 0 }}
-        className="w-1.5 h-8 pointer-events-none"
+        style={{
+          top: "50%",
+          opacity: connectedHandles.has("left-source") ? (data.isDimmed ? 0.25 : 1) : 0,
+          pointerEvents: connectedHandles.has("left-source") ? "auto" : "none",
+        }}
+        className={cn(
+          "w-1.5 h-8 rounded-sm border-none transition-colors",
+          selected || data.isHighlighted ? "!bg-amber-500" : "!bg-amber-300 dark:!bg-amber-600/70 hover:!bg-amber-500"
+        )}
       />
 
       <Handle
         type="source"
         position={Position.Right}
         id="right-source"
-        style={{ top: "50%" }}
+        style={{
+          top: "50%",
+          opacity: (!showOnlyConnected || connectedHandles.has("right-source")) ? (data.isDimmed ? 0.25 : 1) : 0,
+          pointerEvents: (!showOnlyConnected || connectedHandles.has("right-source")) ? "auto" : "none",
+        }}
         className={cn(
           "w-1.5 h-8 rounded-sm border-none transition-colors",
           selected || data.isHighlighted ? "!bg-amber-500" : "!bg-amber-300 dark:!bg-amber-600/70 hover:!bg-amber-500"
@@ -196,8 +242,15 @@ export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>)
         type="target"
         position={Position.Right}
         id="right-target"
-        style={{ top: "50%", opacity: 0 }}
-        className="w-1.5 h-8 pointer-events-none"
+        style={{
+          top: "50%",
+          opacity: connectedHandles.has("right-target") ? (data.isDimmed ? 0.25 : 1) : 0,
+          pointerEvents: connectedHandles.has("right-target") ? "auto" : "none",
+        }}
+        className={cn(
+          "w-1.5 h-8 rounded-sm border-none transition-colors",
+          selected || data.isHighlighted ? "!bg-amber-500" : "!bg-amber-300 dark:!bg-amber-600/70 hover:!bg-amber-500"
+        )}
       />
 
             {/* Floating button when selected in viewer */}
@@ -221,7 +274,7 @@ export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>)
       {/* Main Node Card */}
       <div
         className={cn(
-          "relative flex flex-col w-[155px] h-[165px] bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden transition-all duration-200 select-none",
+          "relative flex flex-col w-[155px] h-[165px] bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden transition-all duration-200 select-none cursor-pointer hover:shadow-lg hover:border-primary/60",
           highlightRing,
           data.isDimmed && "opacity-25 grayscale-[60%] scale-[0.98]",
           data.isIndirect && "border-dashed",
@@ -287,6 +340,10 @@ export const SubjectNode = memo(({ data, selected }: NodeProps<SubjectNodeData>)
         type="source"
         position={Position.Bottom}
         id="bottom-source"
+        style={{
+          opacity: (!showOnlyConnected || isBottomConnected) ? (data.isDimmed ? 0.25 : 1) : 0,
+          pointerEvents: (!showOnlyConnected || isBottomConnected) ? "auto" : "none",
+        }}
         className={cn(
           "w-12 h-1.5 rounded-sm border-none transition-colors",
           selected || data.isHighlighted ? "!bg-primary" : "!bg-slate-300 dark:!bg-slate-600 hover:!bg-primary"

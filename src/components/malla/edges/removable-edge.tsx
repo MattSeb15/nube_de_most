@@ -17,6 +17,7 @@ export const RemovableEdge = ({
   sourcePosition,
   targetPosition,
   style = {},
+  markerStart,
   markerEnd,
   data,
 }: EdgeProps) => {
@@ -34,7 +35,7 @@ export const RemovableEdge = ({
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <BaseEdge path={edgePath} markerStart={markerStart} markerEnd={markerEnd} style={style} />
       <EdgeLabelRenderer>
         <div
           style={{
